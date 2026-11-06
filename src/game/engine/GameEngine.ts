@@ -1100,7 +1100,7 @@ function createTree(rng) {
   const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.95, 1.55, 7), leavesMat);
   c2.position.y = 4.0; c2.castShadow = true; g.add(c2);
   g.rotation.y = rng() * TAU;
-  return { object: g, radius: 1.05 };
+  return { object: g, radius: 0.55 }; // Collision based on trunk size so players and zombies can pass under foliage
 }
 function createDeadTree(rng) {
   const g = new THREE.Group();
@@ -1114,7 +1114,7 @@ function createDeadTree(rng) {
     g.add(br);
   }
   g.rotation.y = rng() * TAU;
-  return { object: g, radius: 0.9 };
+  return { object: g, radius: 0.45 }; // Trunk collision radius
 }
 function createGrave(rng) {
   const g = new THREE.Group();
@@ -1249,8 +1249,18 @@ function createRuinedHouse(rng, facingAngle?: number) {
     g.add(plank);
   });
 
-  g.rotation.y = typeof facingAngle === 'number' ? facingAngle : Math.floor(rng() * 4) * (Math.PI / 2);
-  return { object: g, radius: Math.max(w, d) * 0.56 };
+  const rotY = typeof facingAngle === 'number' ? facingAngle : Math.floor(rng() * 4) * (Math.PI / 2);
+  g.rotation.y = rotY;
+
+  // Box dimensions aligned to world axes
+  const isQuarterTurn = Math.abs(Math.sin(rotY)) > 0.5;
+  const houseW = isQuarterTurn ? d : w;
+  const houseD = isQuarterTurn ? w : d;
+  const hw = houseW / 2;
+  const hd = houseD / 2;
+  const radius = Math.hypot(hw, hd);
+
+  return { object: g, radius, hw, hd };
 }
 
 function createStreetLight(rng) {
@@ -1335,10 +1345,11 @@ function createChunk(cx, cz) {
       const hx = centerX + qx * (14.5 + rng() * 3.5);
       const hz = centerZ + qz * (14.0 + rng() * 3.5);
       if (Math.hypot(hx, hz) > 9.5) {
-        const house = createRuinedHouse(rng, faceAngle + (rng() > 0.5 ? 0 : (qx > 0 ? -Math.PI / 2 : Math.PI / 2)));
+        const face = faceAngle + (rng() > 0.5 ? 0 : (qx > 0 ? -Math.PI / 2 : Math.PI / 2));
+        const house = createRuinedHouse(rng, face);
         house.object.position.set(hx, 0, hz);
         group.add(house.object);
-        obstacles.push({ x: hx, z: hz, r: house.radius });
+        obstacles.push({ x: hx, z: hz, r: house.radius, hw: house.hw, hd: house.hd });
       }
     }
 
@@ -1350,7 +1361,7 @@ function createChunk(cx, cz) {
         const house2 = createRuinedHouse(rng, faceAngle);
         house2.object.position.set(hx2, 0, hz2);
         group.add(house2.object);
-        obstacles.push({ x: hx2, z: hz2, r: house2.radius });
+        obstacles.push({ x: hx2, z: hz2, r: house2.radius, hw: house2.hw, hd: house2.hd });
       }
     }
 
@@ -1434,7 +1445,14 @@ function refreshChunks() {
       const chunk = createChunk(cx, cz);
       needed.add(chunk.key);
       activeChunkKeys.push(chunk.key);
-      for (const o of chunk.obstacles) activeObstacles.push(o);
+      for (const o of chunk.obstacles) {
+        // Guarantee house box half-extents
+        if (o.r > 2.0 && !o.hw) {
+          o.hw = o.r * 0.72;
+          o.hd = o.r * 0.68;
+        }
+        activeObstacles.push(o);
+      }
     }
   }
 
@@ -2171,7 +2189,7 @@ function createZombieModel(type, forcedSkin?: ZombieSkinDef){
     hp: 0, maxHp: 0, speed: 0, damage: 0, reward: 0, score: 0,
     baseScale: scale,
     hitR: cfg.hit, // Hitbox de combate / projéteis (intacta)
-    envHitR: (type === 'brute' || type === 'boss') ? cfg.hit : PLAYER_RADIUS, // Hitbox de ambiente / mapa
+    envHitR: (type === 'brute' || type === 'boss') ? cfg.hit : 0.50, // Hitbox de ambiente / mapa (permite passar em qualquer vão)
     atkRange: cfg.atkRange || 1.55,
     baseAtkCd: cfg.atkCd || 0.82,
     detectRange: cfg.detectRange || 48,
@@ -2699,6 +2717,15 @@ function buildWaveComposition(wave: number): string[] {
   return queue;
 }
 
+function isPositionOnScreen(x: number, z: number, margin = 0.15): boolean {
+  if (!camera) return false;
+  _screenProjVec.set(x, 0.9, z);
+  _screenProjVec.project(camera);
+  return _screenProjVec.z > -1.0 && _screenProjVec.z < 1.0 &&
+         _screenProjVec.x >= (-1.0 - margin) && _screenProjVec.x <= (1.0 + margin) &&
+         _screenProjVec.y >= (-1.0 - margin) && _screenProjVec.y <= (1.0 + margin);
+}
+
 function findSafeSpawnPosition(hitR: number) {
   const px = player ? player.root.position.x : 0;
   const pz = player ? player.root.position.z : 0;
@@ -2709,18 +2736,28 @@ function findSafeSpawnPosition(hitR: number) {
   let chosenX = px + minD;
   let chosenZ = pz;
 
-  for (let attempt = 0; attempt < 14; attempt++) {
+  for (let attempt = 0; attempt < 24; attempt++) {
     const a = Math.random() * TAU;
     const d = minD + Math.random() * (maxD - minD);
     const cx = px + Math.sin(a) * d;
     const cz = pz + Math.cos(a) * d;
 
+    // Guaranteed outside camera field of view
+    if (isPositionOnScreen(cx, cz, 0.15)) continue;
+
     let blocked = false;
     for (let i = 0; i < activeObstacles.length; i++) {
       const o = activeObstacles[i];
-      if (Math.hypot(cx - o.x, cz - o.z) < hitR + o.r + 0.45) {
-        blocked = true;
-        break;
+      if (o.hw && o.hd) {
+        if (Math.abs(cx - o.x) < o.hw + hitR + 0.45 && Math.abs(cz - o.z) < o.hd + hitR + 0.45) {
+          blocked = true;
+          break;
+        }
+      } else {
+        if (Math.hypot(cx - o.x, cz - o.z) < hitR + o.r + 0.45) {
+          blocked = true;
+          break;
+        }
       }
     }
     if (blocked) continue;
@@ -3569,13 +3606,52 @@ function updateCamera(dt) {
 
 /* Physics and game helpers */
 function collideObstacles(pos, radius) {
-  for (const o of activeObstacles) {
-    const dx = pos.x - o.x, dz = pos.z - o.z;
-    const d = Math.hypot(dx, dz);
-    const minD = radius + o.r;
-    if (d < minD && d > 0.001) {
-      pos.x = o.x + (dx / d) * minD;
-      pos.z = o.z + (dz / d) * minD;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < activeObstacles.length; i++) {
+      const o = activeObstacles[i];
+      if (o.hw && o.hd) {
+        // Box obstacle (house / building) - 100% impenetrable walls and corners
+        const minX = o.x - o.hw;
+        const maxX = o.x + o.hw;
+        const minZ = o.z - o.hd;
+        const maxZ = o.z + o.hd;
+
+        if (pos.x >= minX && pos.x <= maxX && pos.z >= minZ && pos.z <= maxZ) {
+          // Center is inside the box: immediately eject out to nearest wall + radius
+          const dLeft = pos.x - minX;
+          const dRight = maxX - pos.x;
+          const dBack = pos.z - minZ;
+          const dFront = maxZ - pos.z;
+          const minEdge = Math.min(dLeft, dRight, dBack, dFront);
+          if (minEdge === dLeft) pos.x = minX - radius;
+          else if (minEdge === dRight) pos.x = maxX + radius;
+          else if (minEdge === dBack) pos.z = minZ - radius;
+          else pos.z = maxZ + radius;
+        } else {
+          // Outside the box: resolve against closest boundary point
+          const cx = Math.max(minX, Math.min(pos.x, maxX));
+          const cz = Math.max(minZ, Math.min(pos.z, maxZ));
+          const dx = pos.x - cx;
+          const dz = pos.z - cz;
+          const dSq = dx * dx + dz * dz;
+          if (dSq < radius * radius && dSq > 0.00001) {
+            const d = Math.sqrt(dSq);
+            pos.x = cx + (dx / d) * radius;
+            pos.z = cz + (dz / d) * radius;
+          }
+        }
+      } else {
+        // Circular obstacle (tree trunk, rock, barricade, street light)
+        const dx = pos.x - o.x;
+        const dz = pos.z - o.z;
+        const minD = radius + o.r;
+        const dSq = dx * dx + dz * dz;
+        if (dSq < minD * minD && dSq > 0.00001) {
+          const d = Math.sqrt(dSq);
+          pos.x = o.x + (dx / d) * minD;
+          pos.z = o.z + (dz / d) * minD;
+        }
+      }
     }
   }
 }
@@ -3583,11 +3659,27 @@ function collideObstacles(pos, radius) {
 function checkObstacleCollision(px: number, pz: number, radius: number): boolean {
   for (let i = 0; i < activeObstacles.length; i++) {
     const o = activeObstacles[i];
-    const dx = px - o.x;
-    const dz = pz - o.z;
-    const minD = radius + o.r;
-    if (dx * dx + dz * dz < minD * minD) {
-      return true;
+    if (o.hw && o.hd) {
+      const minX = o.x - o.hw;
+      const maxX = o.x + o.hw;
+      const minZ = o.z - o.hd;
+      const maxZ = o.z + o.hd;
+      if (px >= minX - radius && px <= maxX + radius && pz >= minZ - radius && pz <= maxZ + radius) {
+        const cx = Math.max(minX, Math.min(px, maxX));
+        const cz = Math.max(minZ, Math.min(pz, maxZ));
+        const dx = px - cx;
+        const dz = pz - cz;
+        if (dx * dx + dz * dz < radius * radius) {
+          return true;
+        }
+      }
+    } else {
+      const dx = px - o.x;
+      const dz = pz - o.z;
+      const minD = radius + o.r;
+      if (dx * dx + dz * dz < minD * minD) {
+        return true;
+      }
     }
   }
   return false;
@@ -3812,13 +3904,8 @@ function steerObstacles(pos, radius, vx, vz, z) {
 }
 
 function isZombieOnScreen(z) {
-  if (!z || !z.root || !camera) return false;
-  _screenProjVec.copy(z.root.position);
-  _screenProjVec.y += 0.9;
-  _screenProjVec.project(camera);
-
-  // Strict check: zombie must be inside the visible camera viewport (-0.96 to +0.96 NDC) to be targeted or killed
-  return _screenProjVec.z > -1.0 && _screenProjVec.z < 1.0 && _screenProjVec.x >= -0.96 && _screenProjVec.x <= 0.96 && _screenProjVec.y >= -0.96 && _screenProjVec.y <= 0.96;
+  if (!z || !z.root) return false;
+  return isPositionOnScreen(z.root.position.x, z.root.position.z, -0.04);
 }
 
 // Line-of-sight check against solid obstacles (houses, buildings, cars with radius >= 1.5)
@@ -4846,18 +4933,32 @@ function updateZombies(dt) {
       z.auraRing.scale.setScalar(auraPulse);
     }
 
-    const dx = player.root.position.x - z.root.position.x;
-    const dz = player.root.position.z - z.root.position.z;
-    const d = Math.hypot(dx, dz) || 1;
+    let dx = player.root.position.x - z.root.position.x;
+    let dz = player.root.position.z - z.root.position.z;
+    let d = Math.hypot(dx, dz) || 1;
 
-    // Detection check: idle if outside detection range
-    if (d > (z.detectRange || 48)) {
-      z.state = 'idle';
-      z.step += dt * 1.5;
-      if (z.torso) z.torso.position.y = (isHeavy ? 1.28 : 1.0) + Math.sin(z.step) * 0.02;
-      continue;
+    // Se o jogador se afastar muito, reposiciona os zombies restantes mais perto (fora do campo de visão)
+    z.repositionCd = Math.max(0, (z.repositionCd || 0) - dt);
+    const maxLeashDist = z.isBoss ? 56 : 42;
+    if (d > maxLeashDist && z.repositionCd <= 0 && (!z.smashTimer || z.smashTimer <= 0)) {
+      const newPos = findSafeSpawnPosition(z.hitR);
+      if (!isPositionOnScreen(newPos.x, newPos.z, 0.15)) {
+        z.root.position.set(newPos.x, 0, newPos.z);
+        z.lastX = newPos.x;
+        z.lastZ = newPos.z;
+        z.unstuckTimer = 0;
+        z.stuckSampleTimer = 0;
+        z.repositionCd = 2.0;
+
+        // Recalcula o vetor e distância para o jogador a partir da nova posição
+        dx = player.root.position.x - newPos.x;
+        dz = player.root.position.z - newPos.z;
+        d = Math.hypot(dx, dz) || 1;
+      }
     }
 
+    // Perseguição ininterrupta do jogador independentemente da distância (sem limite de deteção ou idle)
+    z.state = 'chase';
     z.step += dt * cryoMult * (z.animSpeed || 5.3);
 
     let speed = z.speed * cryoMult;
@@ -5045,18 +5146,18 @@ function updateZombies(dt) {
 
     // 5. Zombie Movement & Obstacle Collision (Anti-Stuck + Multi-Angle Whiskers + Axis-Separated Sliding)
     // Separar Hitbox de Ambiente da Hitbox de Combate:
-    // Todos os zombies normais usam exatamente o mesmo raio que o jogador (PLAYER_RADIUS),
-    // garantindo que conseguem passar nos mesmos caminhos estreitos que o jogador passa.
+    // Todos os zombies normais usam um raio de colisão de ambiente (envRadius <= PLAYER_RADIUS),
+    // garantindo que conseguem passar nos mesmos caminhos estreitos (ex: entre casa e árvore) que o jogador passa.
     // Apenas Zombies Grandes, Brutes e Bosses mantêm o raio de colisão de ambiente maior.
     const isBigZombie = z.type === 'brute' || z.type === 'boss' || z.isBoss || z.isMiniBoss || (z.baseScale && z.baseScale >= 1.6);
-    const envRadius = isBigZombie ? (z.envHitR || z.hitR) : PLAYER_RADIUS;
+    const envRadius = isBigZombie ? (z.envHitR || z.hitR) : Math.min(PLAYER_RADIUS, 0.50);
 
     const baseMoveSpd = Math.hypot(vx, vz);
     const toPlayerAngle = Math.atan2(dx, dz);
     let chosenMoveAngle = toPlayerAngle;
 
     // Mecanismo 3: Detetor Anti-Stuck (Unstuck Timer)
-    // Guarda a última posição a cada 0.5s. Se a distância percorrida for quase zero, força andar perpendicularmente (90°) por 0.8s
+    // Guarda a última posição a cada 0.5s. Se a distância percorrida for quase zero, testa qual direção lateral está livre
     z.stuckSampleTimer = (z.stuckSampleTimer || 0) + dt;
     if (z.stuckSampleTimer >= 0.5) {
       const distSample = Math.hypot(
@@ -5067,10 +5168,22 @@ function updateZombies(dt) {
       z.lastSampleZ = z.root.position.z;
       z.stuckSampleTimer = 0;
 
-      if (distSample < 0.12 && d > (z.atkRange || 1.2) + 0.3 && (!z.smashTimer || z.smashTimer <= 0)) {
-        z.unstuckTimer = 0.8; // Força 0.8s de desvio perpendicular
-        z.unstuckSign = (z.unstuckSign === 1) ? -1 : 1;
-        z.unstuckAngle = toPlayerAngle + (Math.PI * 0.5) * z.unstuckSign;
+      if (distSample < 0.08 && d > (z.atkRange || 1.2) + 0.3 && (!z.smashTimer || z.smashTimer <= 0)) {
+        // Verifica qual direção lateral (+90° ou -90°) tem espaço livre de obstáculos
+        const angleRight = toPlayerAngle + Math.PI * 0.5;
+        const angleLeft = toPlayerAngle - Math.PI * 0.5;
+        const probeR = envRadius * 0.6;
+        const rightClear = !checkObstacleCollision(z.root.position.x + Math.sin(angleRight) * 0.75, z.root.position.z + Math.cos(angleRight) * 0.75, probeR);
+        const leftClear = !checkObstacleCollision(z.root.position.x + Math.sin(angleLeft) * 0.75, z.root.position.z + Math.cos(angleLeft) * 0.75, probeR);
+
+        if (rightClear || leftClear) {
+          z.unstuckTimer = 0.6;
+          z.unstuckAngle = (rightClear && !leftClear) ? angleRight : (!rightClear && leftClear) ? angleLeft : (z.unstuckSign === 1 ? angleRight : angleLeft);
+          z.unstuckSign = (z.unstuckSign === 1) ? -1 : 1;
+        } else {
+          // Ambos os lados bloqueados (corredor estreito entre objetos): mantém o avanço direto em direção ao jogador!
+          z.unstuckTimer = 0;
+        }
       }
     }
 
@@ -5079,12 +5192,13 @@ function updateZombies(dt) {
       chosenMoveAngle = z.unstuckAngle;
     } else if (baseMoveSpd > 0.001) {
       // Mecanismo 2: Sistema de "Whiskers" (Multi-Angle Raycasting)
-      // Testa ponto à frente usando o raio de ambiente. Se colidir, testa incrementos de ±25° até ±90°
-      const whiskerDist = envRadius + 1.25;
+      // Testa ponto logo à frente. Se colidir com obstáculo frontal, testa incrementos angulares
+      const whiskerDist = envRadius + 0.65;
       const frontX = z.root.position.x + Math.sin(toPlayerAngle) * whiskerDist;
       const frontZ = z.root.position.z + Math.cos(toPlayerAngle) * whiskerDist;
 
-      if (checkObstacleCollision(frontX, frontZ, envRadius * 0.85)) {
+      // Se o caminho direto estiver livre ou o jogador estiver mais próximo que o whisker, vai direto ao jogador
+      if (d > whiskerDist && checkObstacleCollision(frontX, frontZ, envRadius * 0.55)) {
         const DEG25 = 25 * (Math.PI / 180);
         const whiskerOffsets = [
           DEG25, -DEG25,
@@ -5097,9 +5211,9 @@ function updateZombies(dt) {
           const testAngle = toPlayerAngle + whiskerOffsets[a];
           const testProbeX = z.root.position.x + Math.sin(testAngle) * whiskerDist;
           const testProbeZ = z.root.position.z + Math.cos(testAngle) * whiskerDist;
-          if (!checkObstacleCollision(testProbeX, testProbeZ, envRadius * 0.85)) {
+          if (!checkObstacleCollision(testProbeX, testProbeZ, envRadius * 0.55)) {
             chosenMoveAngle = testAngle;
-            break; // Move na primeira direção totalmente livre!
+            break; // Move na primeira direção livre!
           }
         }
       }
@@ -5122,32 +5236,29 @@ function updateZombies(dt) {
     let appliedX = curX;
     if (!checkObstacleCollision(candidateX, curZ, collR)) {
       appliedX = candidateX; // Eixo X livre
-    } // Se colidir, cancela apenas X
+    }
 
     // 2. Testa eixo Z de forma independente
     const candidateZ = curZ + stepZ;
     let appliedZ = curZ;
     if (!checkObstacleCollision(appliedX, candidateZ, collR)) {
       appliedZ = candidateZ; // Eixo Z livre
-    } // Se colidir, cancela apenas Z
+    }
+
+    // GARANTIA DE PASSAGEM EM ESPAÇOS ESTREITOS (ex: entre casa e árvore):
+    // Se ambos os eixos forem bloqueados por constrangimento entre dois obstáculos,
+    // NUNCA bloqueia o movimento total: avança o passo desejado em direção ao alvo e deixa
+    // a resolução de sobreposição (relaxation) empurrar o zombie pelo centro do corredor, exatamente como o jogador faz!
+    if (appliedX === curX && appliedZ === curZ && baseMoveSpd > 0.001) {
+      appliedX = curX + stepX;
+      appliedZ = curZ + stepZ;
+    }
 
     z.root.position.x = appliedX;
     z.root.position.z = appliedZ;
 
-    // Resolução de sobreposição para impedir qualquer clipping
-    for (let k = 0; k < activeObstacles.length; k++) {
-      const o = activeObstacles[k];
-      const ox = z.root.position.x - o.x;
-      const oz = z.root.position.z - o.z;
-      const minD = collR + o.r;
-      const dSq = ox * ox + oz * oz;
-      if (dSq < minD * minD && dSq > 0.0001) {
-        const dist = Math.sqrt(dSq);
-        const push = minD - dist;
-        z.root.position.x += (ox / dist) * push;
-        z.root.position.z += (oz / dist) * push;
-      }
-    }
+    // Resolução de sobreposição para impedir qualquer clipping e nunca entrar nos objetos
+    collideObstacles(z.root.position, collR);
 
     // Orientação suave do corpo do zombie
     let targetHeading = toPlayerAngle;
