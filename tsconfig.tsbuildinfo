@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/hud/hud.tsx","./src/components/ui/gameoverscreen.tsx","./src/components/ui/mainmenu.tsx","./src/components/ui/pausescreen.tsx","./src/game/engine/gameengine.ts","./src/game/systems/audiosystem.ts","./src/game/systems/metasystem.ts","./src/services/ads.ts","./src/services/billing.ts"],"version":"5.9.3"}
