@@ -26,6 +26,7 @@ export class GameEngine {
   this.resumeGame = () => { togglePause(false); };
   this.togglePause = () => { togglePause(); };
   this.isPaused = () => paused;
+  this.triggerGameOver = () => { gameOver(); };
   this.updateAudioVolumes = () => { meta = loadMeta(); initAudio(); };
   this.quitToMenu = () => { meta = loadMeta(); stopMusic(); disposeCompanion(); screen = 'menu'; run = null; _this.callbacks.onStateChange('menu'); };
   this.getRunStats = () => run;
@@ -660,64 +661,253 @@ const sfx = {
     g.gain.exponentialRampToValueAtTime(0.001, t0 + 1.24);
     o.connect(g); g.connect(masterGain); o.start(t0); o.stop(t0 + 1.28);
   },
-  zombieGroan(type = 'walker') {
-    if (!actx || meta?.masterMuted) return;
-    const t0 = actx.currentTime + 0.01;
-    const isHeavy = type === 'brute' || type === 'boss' || type === 'armored';
-    const isFast = type === 'runner' || type === 'spitter' || type === 'toxic' || type === 'crawler';
-    const dur = isHeavy ? 0.65 : isFast ? 0.36 : 0.48;
-    const baseFreq = isHeavy ? rand(52, 68) : isFast ? rand(115, 148) : rand(78, 102);
-
-    // 1. Guttural Vocal Cord Formant (Detuned Sawtooth + Triangle through Vocal Filter)
-    const o1 = actx.createOscillator();
-    const o2 = actx.createOscillator();
-    const formant = actx.createBiquadFilter();
-    const vg = actx.createGain();
-
-    o1.type = 'sawtooth';
-    o2.type = 'triangle';
-    o1.frequency.setValueAtTime(baseFreq, t0);
-    o1.frequency.linearRampToValueAtTime(baseFreq * 1.14, t0 + dur * 0.35);
-    o1.frequency.exponentialRampToValueAtTime(baseFreq * 0.76, t0 + dur);
-
-    o2.frequency.setValueAtTime(baseFreq * 1.03, t0);
-    o2.frequency.linearRampToValueAtTime(baseFreq * 1.18, t0 + dur * 0.35);
-    o2.frequency.exponentialRampToValueAtTime(baseFreq * 0.74, t0 + dur);
-
-    formant.type = 'bandpass';
-    formant.frequency.setValueAtTime(isHeavy ? 260 : 390, t0);
-    formant.frequency.exponentialRampToValueAtTime(isHeavy ? 160 : 240, t0 + dur);
-    formant.Q.setValueAtTime(2.4, t0);
-
-    vg.gain.setValueAtTime(0.0001, t0);
-    vg.gain.linearRampToValueAtTime(isHeavy ? 0.22 : 0.14, t0 + 0.05);
-    vg.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-
-    o1.connect(formant);
-    o2.connect(formant);
-    formant.connect(vg);
-    vg.connect(masterGain);
-
-    o1.start(t0); o2.start(t0);
-    o1.stop(t0 + dur + 0.03); o2.stop(t0 + dur + 0.03);
-
-    // 2. Raspy Zombie Breath / Snarl Noise Layer
-    const nSrc = actx.createBufferSource();
-    nSrc.buffer = noiseBuffer(dur);
-    const nBp = actx.createBiquadFilter();
-    nBp.type = 'bandpass';
-    nBp.frequency.setValueAtTime(isHeavy ? 520 : 780, t0);
-    nBp.Q.setValueAtTime(1.8, t0);
-    const ng = actx.createGain();
-    ng.gain.setValueAtTime(0.0001, t0);
-    ng.gain.linearRampToValueAtTime(isHeavy ? 0.12 : 0.08, t0 + 0.04);
-    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    nSrc.connect(nBp);
-    nBp.connect(ng);
-    ng.connect(masterGain);
-    nSrc.start(t0);
+  zombieGroan(type = 'walker', sourceZombie: any = null) {
+    if (sourceZombie && !sourceZombie.dead) {
+      playZombieSpatialGroan(sourceZombie);
+      return;
+    }
+    const nearZ = nearestZombie(MAX_GROAN_HEARING_DIST);
+    if (nearZ) {
+      playZombieSpatialGroan(nearZ);
+    }
   }
 };
+
+/* ═════════════════════════════════════════════════════════════════════
+   DYNAMIC 3D SPATIAL AUDIO SYSTEM FOR ZOMBIES
+   ═════════════════════════════════════════════════════════════════════ */
+const MAX_GROAN_HEARING_DIST = 28.0;
+const MAX_SIMULTANEOUS_GROANS = 4;
+let activeZombieGroans: any[] = [];
+let lastZombieGroanTime = 0;
+
+function cleanupGroanRecord(g: any) {
+  if (!g) return;
+  try {
+    if (g.sources) {
+      g.sources.forEach((s: any) => {
+        try { s.stop?.(); } catch (e) {}
+        try { s.disconnect?.(); } catch (e) {}
+      });
+    }
+    if (g.nodes) {
+      g.nodes.forEach((n: any) => {
+        try { n.disconnect?.(); } catch (e) {}
+      });
+    }
+  } catch (e) {}
+  if (g.zombie && g.zombie.activeGroans) {
+    const idx = g.zombie.activeGroans.indexOf(g);
+    if (idx !== -1) g.zombie.activeGroans.splice(idx, 1);
+  }
+}
+
+function stopZombieGroan(z: any) {
+  if (!z || !z.activeGroans) return;
+  for (let i = z.activeGroans.length - 1; i >= 0; i--) {
+    const g = z.activeGroans[i];
+    cleanupGroanRecord(g);
+    const idx = activeZombieGroans.indexOf(g);
+    if (idx !== -1) activeZombieGroans.splice(idx, 1);
+  }
+  z.activeGroans = [];
+}
+
+function stopAllZombieGroans() {
+  for (let i = activeZombieGroans.length - 1; i >= 0; i--) {
+    cleanupGroanRecord(activeZombieGroans[i]);
+  }
+  activeZombieGroans = [];
+}
+
+function playZombieSpatialGroan(z: any) {
+  // 1. Integration in SFX Category: Strictly respect masterVolume and masterMuted
+  if (!actx || !masterGain || meta?.masterMuted || (meta?.masterVolume ?? 80) <= 0) return;
+  if (!player || !player.root || !z || !z.root || z.dead) return;
+
+  const t0 = actx.currentTime + 0.005;
+
+  // 2. 3D Coordinates & Distance Check (Do not play audio beyond max hearing distance)
+  const px = player.root.position.x;
+  const pz = player.root.position.z;
+  const zx = z.root.position.x;
+  const zz = z.root.position.z;
+  const dx = zx - px;
+  const dz = zz - pz;
+  const dist = Math.hypot(dx, dz);
+
+  if (dist > MAX_GROAN_HEARING_DIST) return;
+
+  // 3. Concurrency limiter to prevent audio clutter / cacophony
+  if (actx.currentTime - lastZombieGroanTime < 0.16) {
+    z.groanTimer = rand(0.2, 0.45);
+    return;
+  }
+  if (activeZombieGroans.length >= MAX_SIMULTANEOUS_GROANS) {
+    z.groanTimer = rand(0.3, 0.65);
+    return;
+  }
+  lastZombieGroanTime = actx.currentTime;
+
+  // 4. Initial Spatial Positioning:
+  // Stereo pan: -1.0 (far left) to +1.0 (far right)
+  const initialPan = Math.max(-1, Math.min(1, dx / Math.max(dist, 2.5)));
+
+  // Smooth distance volume attenuation (drops to 0 at max distance)
+  const distFactor = Math.max(0, 1 - dist / MAX_GROAN_HEARING_DIST);
+  const isHeavy = z.type === 'brute' || z.type === 'boss' || z.type === 'armored';
+  const isFast = z.type === 'runner' || z.type === 'spitter' || z.type === 'toxic' || z.type === 'crawler';
+  const baseVol = isHeavy ? 0.32 : isFast ? 0.20 : 0.24;
+
+  let initialVol = Math.pow(distFactor, 1.25) * baseVol;
+  // Acoustic cue for rear sounds (slightly lower volume behind player)
+  if (dz < 0) initialVol *= 0.82;
+
+  // Front/Back Acoustic Lowpass Filter (pinna / head shadow simulation):
+  // When in front (dz >= 0): cutoff up to ~4500Hz (crisp, present)
+  // When behind (dz < 0): cutoff down to ~1200Hz (muffled, unmistakably behind listener)
+  const frontRatio = Math.max(-1, Math.min(1, dz / Math.max(dist, 1.0)));
+  const initialCutoff = 1200 + ((frontRatio + 1) / 2) * 3300;
+
+  // 5. Construct Web Audio Nodes
+  let pannerNode: any = null;
+  if ((actx as any).createStereoPanner) {
+    pannerNode = (actx as any).createStereoPanner();
+    pannerNode.pan.setValueAtTime(initialPan, t0);
+  }
+
+  const distGain = actx.createGain();
+  distGain.gain.setValueAtTime(initialVol, t0);
+
+  const frontBackFilter = actx.createBiquadFilter();
+  frontBackFilter.type = 'lowpass';
+  frontBackFilter.frequency.setValueAtTime(initialCutoff, t0);
+  frontBackFilter.Q.setValueAtTime(0.7, t0);
+
+  // Wire spatial processing chain to masterGain (SFX bus)
+  if (pannerNode) {
+    frontBackFilter.connect(pannerNode);
+    pannerNode.connect(distGain);
+    distGain.connect(masterGain);
+  } else {
+    frontBackFilter.connect(distGain);
+    distGain.connect(masterGain);
+  }
+
+  // 6. Vocal Synthesis with Organic Variations (pitch, duration, formant timbre)
+  const baseDur = isHeavy ? 0.68 : isFast ? 0.38 : 0.52;
+  const dur = baseDur * rand(0.88, 1.18);
+  const pitchMod = (z.groanPitchMod || 1.0) * rand(0.92, 1.08);
+  const baseFreq = (isHeavy ? rand(50, 68) : isFast ? rand(112, 145) : rand(75, 102)) * pitchMod;
+
+  // Vocal Cord Formant (Dual detuned oscillators through vocal bandpass filter)
+  const o1 = actx.createOscillator();
+  const o2 = actx.createOscillator();
+  const formant = actx.createBiquadFilter();
+  const vg = actx.createGain();
+
+  o1.type = 'sawtooth';
+  o2.type = 'triangle';
+
+  o1.frequency.setValueAtTime(baseFreq, t0);
+  o1.frequency.linearRampToValueAtTime(baseFreq * rand(1.08, 1.20), t0 + dur * 0.35);
+  o1.frequency.exponentialRampToValueAtTime(baseFreq * rand(0.70, 0.82), t0 + dur);
+
+  o2.frequency.setValueAtTime(baseFreq * rand(1.02, 1.05), t0);
+  o2.frequency.linearRampToValueAtTime(baseFreq * rand(1.12, 1.25), t0 + dur * 0.35);
+  o2.frequency.exponentialRampToValueAtTime(baseFreq * rand(0.68, 0.78), t0 + dur);
+
+  formant.type = 'bandpass';
+  const startF = (isHeavy ? 260 : isFast ? 440 : 360) * rand(0.9, 1.15);
+  const endF = (isHeavy ? 150 : isFast ? 280 : 220) * rand(0.85, 1.1);
+  formant.frequency.setValueAtTime(startF, t0);
+  formant.frequency.exponentialRampToValueAtTime(endF, t0 + dur);
+  formant.Q.setValueAtTime(rand(2.0, 2.9), t0);
+
+  vg.gain.setValueAtTime(0.0001, t0);
+  vg.gain.linearRampToValueAtTime(isHeavy ? 0.35 : 0.22, t0 + rand(0.04, 0.08));
+  vg.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+  o1.connect(formant);
+  o2.connect(formant);
+  formant.connect(vg);
+  vg.connect(frontBackFilter);
+
+  // Raspy Breathing / Snarl Noise Layer
+  const nSrc = actx.createBufferSource();
+  const nBuf = noiseBuffer(dur);
+  if (nBuf) nSrc.buffer = nBuf;
+  const nBp = actx.createBiquadFilter();
+  nBp.type = 'bandpass';
+  nBp.frequency.setValueAtTime((isHeavy ? 520 : 780) * rand(0.9, 1.15), t0);
+  nBp.Q.setValueAtTime(1.8, t0);
+  const ng = actx.createGain();
+  ng.gain.setValueAtTime(0.0001, t0);
+  ng.gain.linearRampToValueAtTime(isHeavy ? 0.14 : 0.09, t0 + 0.04);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+  nSrc.connect(nBp);
+  nBp.connect(ng);
+  ng.connect(frontBackFilter);
+
+  o1.start(t0); o2.start(t0); nSrc.start(t0);
+  o1.stop(t0 + dur + 0.05); o2.stop(t0 + dur + 0.05); nSrc.stop(t0 + dur + 0.05);
+
+  // 7. Register Active Groan for Continuous Real-Time Tracking in 3D Space
+  const groanRecord = {
+    zombie: z,
+    pannerNode,
+    distGain,
+    frontBackFilter,
+    baseVol,
+    sources: [o1, o2, nSrc],
+    nodes: [formant, vg, nBp, ng, frontBackFilter, pannerNode, distGain].filter(Boolean),
+    endTime: t0 + dur + 0.06
+  };
+
+  activeZombieGroans.push(groanRecord);
+  z.activeGroans = z.activeGroans || [];
+  z.activeGroans.push(groanRecord);
+}
+
+function updateActiveZombieGroans(dt: number) {
+  if (!actx || activeZombieGroans.length === 0) return;
+  const now = actx.currentTime;
+
+  for (let i = activeZombieGroans.length - 1; i >= 0; i--) {
+    const g = activeZombieGroans[i];
+    const z = g.zombie;
+
+    // Check if audio finished, or zombie died / was removed
+    if (!z || z.dead || !z.root || now >= g.endTime) {
+      cleanupGroanRecord(g);
+      activeZombieGroans.splice(i, 1);
+      continue;
+    }
+
+    // Follow moving zombie in real-time coordinates:
+    const dx = z.root.position.x - player.root.position.x;
+    const dz = z.root.position.z - player.root.position.z;
+    const dist = Math.hypot(dx, dz);
+
+    // Update real-time stereo pan
+    if (g.pannerNode) {
+      const pan = Math.max(-1, Math.min(1, dx / Math.max(dist, 2.5)));
+      g.pannerNode.pan.setTargetAtTime(pan, now, 0.04);
+    }
+
+    // Update real-time distance volume
+    const distFactor = Math.max(0, 1 - dist / MAX_GROAN_HEARING_DIST);
+    let vol = Math.pow(distFactor, 1.25) * g.baseVol;
+    if (dz < 0) vol *= 0.82;
+    g.distGain.gain.setTargetAtTime(vol, now, 0.04);
+
+    // Update real-time front/back acoustic filtering
+    const frontRatio = Math.max(-1, Math.min(1, dz / Math.max(dist, 1.0)));
+    const cutoff = 1200 + ((frontRatio + 1) / 2) * 3300;
+    g.frontBackFilter.frequency.setTargetAtTime(cutoff, now, 0.04);
+  }
+}
 
 /* 3D scene */
 let scene, camera, renderer, clock, raycaster, groundPlane;
@@ -2492,11 +2682,15 @@ function createZombieModel(type, forcedSkin?: ZombieSkinDef){
 }
 
 function createZombie(type, forcedSkin?: ZombieSkinDef){
-  const z=createZombieModel(type, forcedSkin);
+  const z=createZombieModel(type, forcedSkin) as any;
   const base=zombieTypes[type] || zombieTypes.walker;
   z.hp=base.hp; z.maxHp=base.hp;
   z.speed=base.speed; z.damage=base.damage;
   z.reward=base.reward; z.score=base.score;
+  // Independent 3D groan timer (initial stagger between 0.5s and 6.0s so zombies don't all groan at the same instant)
+  z.groanTimer = rand(0.5, 6.0);
+  z.groanPitchMod = rand(0.92, 1.08);
+  z.activeGroans = [];
   return z;
 }
 
@@ -2783,6 +2977,7 @@ function findSafeSpawnPosition(hitR: number) {
 
 /* Game state */
 function resetRun() {
+  stopAllZombieGroans();
   zombies.forEach(z => scene.remove(z.root));
   dyingZombies.forEach(d => scene.remove(d.root));
   toxicPools.forEach(tp => { scene.remove(tp.mesh); tp.mat?.dispose?.(); });
@@ -3235,7 +3430,12 @@ function togglePause(force) {
   lastSettingsToggle = now;
 
   paused = typeof force === 'boolean' ? force : !paused;
-  if(paused) _this.callbacks.onStateChange('pause'); else _this.callbacks.onStateChange('game');
+  if (paused) {
+    stopAllZombieGroans();
+    _this.callbacks.onStateChange('pause');
+  } else {
+    _this.callbacks.onStateChange('game');
+  }
   if (paused) {
     mouse.down = false;
     Object.keys(touch).forEach(k => touch[k] = false);
@@ -3254,7 +3454,7 @@ function togglePause(force) {
 function gameOver() {
   if (screen !== 'game') return;
   screen = 'over';
-  
+  stopAllZombieGroans();
   
   _this.callbacks.onStateChange('gameover');
   if (dom.ovWave) dom.ovWave.textContent = run.wave;
@@ -4251,6 +4451,7 @@ function killZombie(idx) {
   const z = zombies[idx];
   if (!z || z.dead) return;
   z.dead = true;
+  stopZombieGroan(z);
   if (z.smashRing) z.smashRing.visible = false;
   if (z.auraRing) z.auraRing.visible = false;
 
@@ -4905,14 +5106,6 @@ function updateDyingZombies(dt) {
 
 function updateZombies(dt) {
   const cryoMult = run && run.cryoTimer > 0 ? 0.35 : 1.0;
-  zombieGroanCd = Math.max(0, zombieGroanCd - dt);
-  if (zombieGroanCd <= 0 && zombies.length > 0 && screen === 'game' && !paused) {
-    const nearZ = nearestZombie(20);
-    if (nearZ && sfx && sfx.zombieGroan) {
-      sfx.zombieGroan(nearZ.type);
-      zombieGroanCd = rand(2.1, 3.8);
-    }
-  }
 
   for (let i = 0; i < zombies.length; i++) {
     const z = zombies[i];
@@ -4922,6 +5115,19 @@ function updateZombies(dt) {
     const isToxicBoss = z.bossArchetype === 'toxic_boss' || z.bossArchetype === 'blight_mini';
     const isToxic = z.type === 'toxic' || z.type === 'spitter' || isToxicBoss;
     const baseScale = z.baseScale || cfg.scale;
+
+    // 1. Cada zombie tem o seu próprio temporizador independente de ~6 segundos
+    if (screen === 'game' && !paused) {
+      if (typeof z.groanTimer !== 'number') {
+        z.groanTimer = rand(0.5, 6.0);
+      }
+      z.groanTimer -= dt;
+      if (z.groanTimer <= 0) {
+        // Intervalo de ~6 segundos com pequenas variações aleatórias (ex: 5.4s a 6.6s)
+        z.groanTimer = rand(5.4, 6.6);
+        playZombieSpatialGroan(z);
+      }
+    }
 
     z.atkCd = Math.max(0, z.atkCd - dt * cryoMult);
     z.atkAnim = Math.max(0, (z.atkAnim || 0) - dt * 3.5);
@@ -4999,7 +5205,7 @@ function updateZombies(dt) {
           const burstColor = isToxicBoss ? 0x39ff14 : z.bossArchetype === 'armored_boss' ? 0x00e5ff : z.bossArchetype === 'mutated_boss' ? 0xd500f9 : 0xff5522;
           spawnBurst(z.root.position.x, z.root.position.z, burstColor, z.isBoss ? 30 : 22, 1.5, 5.8);
           shake = Math.min(1.05, shake + (z.isBoss ? 0.58 : 0.45));
-          if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.isBoss ? 'boss' : 'brute');
+          if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.isBoss ? 'boss' : 'brute', z);
 
           // Toxic Boss & Blight Mini-Boss spawn acid pools on Nova slam
           if (isToxicBoss) {
@@ -5014,7 +5220,7 @@ function updateZombies(dt) {
         }
       } else if (d < sRad * 0.92 && z.smashCd <= 0) {
         z.smashTimer = z.smashWindup || cfg.smashWindup || 0.65;
-        if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.isBoss ? 'boss' : 'brute');
+        if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.isBoss ? 'boss' : 'brute', z);
       }
 
       // Heavy / Shield / Frenzy Charge at mid-close range
@@ -5022,7 +5228,7 @@ function updateZombies(dt) {
         const chargeTriggerDist = z.isBoss ? 11.5 : 9.0;
         if (d < chargeTriggerDist && d > 2.6 && z.charge <= 0 && Math.random() < dt * (z.isBoss ? 0.95 : 0.75)) {
           z.charge = z.bossArchetype === 'stalker_mini' || z.bossArchetype === 'mutated_boss' ? 0.95 : 0.85;
-          if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.type);
+          if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.type, z);
         }
         if (z.charge > 0) {
           const chargeMult = (z.bossArchetype === 'stalker_mini' || z.bossArchetype === 'riot_mini' || z.bossArchetype === 'armored_boss') ? 2.25 : 2.05;
@@ -5040,7 +5246,7 @@ function updateZombies(dt) {
           z.summonCd = 11.0;
           z.atkAnim = 0.35;
           spawnBurst(z.root.position.x, z.root.position.z, 0xd500f9, 24, 1.2, 4.5);
-          if (sfx && sfx.zombieGroan) sfx.zombieGroan('boss');
+          if (sfx && sfx.zombieGroan) sfx.zombieGroan('boss', z);
           const mults = getWaveDifficultyMultipliers(run.wave);
           for (let s = 0; s < 2; s++) {
             const sumType = s === 0 ? 'runner' : 'walker';
@@ -5069,7 +5275,7 @@ function updateZombies(dt) {
         if (d > 4.5 && d < 25 && z.bossRangedCd <= 0 && (!z.smashTimer || z.smashTimer <= 0)) {
           z.bossRangedCd = rand(4.0, 6.2);
           z.atkAnim = 0.35;
-          if (sfx && sfx.zombieGroan) sfx.zombieGroan('boss');
+          if (sfx && sfx.zombieGroan) sfx.zombieGroan('boss', z);
 
           const venomGeo = new THREE.SphereGeometry(0.32, 10, 10);
           const venomMat = new THREE.MeshBasicMaterial({ color: 0x39ff14 });
@@ -5332,7 +5538,7 @@ function updateZombies(dt) {
       z.atkCd = z.baseAtkCd || 0.82;
       z.atkAnim = 0.28;
       z.state = 'attack';
-      if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.type);
+      if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.type, z);
       hurtPlayer(z.damage);
     }
   }
@@ -6086,6 +6292,7 @@ function updateGame(dt) {
   updateEnemyBullets(dt);
   updateToxicPools(dt);
   updateZombies(dt);
+  updateActiveZombieGroans(dt);
   updateDyingZombies(dt);
   updatePickups(dt);
   updateParticles(dt);
