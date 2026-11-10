@@ -15,17 +15,14 @@
   <script>
     // Garantir que o som está no máximo (100%) no localStorage e desbloquear o AudioContext
     try {
-        const savedData = localStorage.getItem('neon_deadlands_3d_meta');
-        if (savedData) {
-            const parsed = JSON.parse(savedData);
-            if (parsed) {
-                parsed.masterMuted = false;
-                parsed.musicMuted = false;
-                parsed.masterVolume = 100;
-                parsed.musicVolume = 100;
-                localStorage.setItem('neon_deadlands_3d_meta', JSON.stringify(parsed));
-            }
-        }
+        let savedData = localStorage.getItem('neon_deadlands_3d_meta');
+        let parsed = savedData ? JSON.parse(savedData) : {};
+        if (!parsed) parsed = {};
+        parsed.masterMuted = false;
+        parsed.musicMuted = false;
+        parsed.masterVolume = 100;
+        parsed.musicVolume = 100;
+        localStorage.setItem('neon_deadlands_3d_meta', JSON.stringify(parsed));
     } catch (e) {
         console.error("Erro ao ajustar volumes no localStorage:", e);
     }
@@ -42,7 +39,7 @@
         }
     };
 
-    ['click', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+    ['click', 'touchstart', 'pointerdown', 'keydown', 'mousedown'].forEach(evt => {
         window.addEventListener(evt, unlockAudio, { once: false, passive: true });
     });
 

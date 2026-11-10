@@ -235,7 +235,7 @@ class PlayerHurtSoundManager {
                 const parsed = JSON.parse(savedData);
                 if (parsed) {
                     if (parsed.masterMuted) return;
-                    const vol = typeof parsed.masterVolume === 'number' ? parsed.masterVolume : 80;
+                    const vol = typeof parsed.musicVolume === 'number' ? parsed.musicVolume : 80;
                     volMultiplier = (vol / 100) * 0.95;
                 }
             }
@@ -436,13 +436,15 @@ class BackgroundMusicManager {
             if (savedData) {
                 const parsed = JSON.parse(savedData);
                 if (parsed) {
-                    if (parsed.musicMuted || parsed.masterMuted) return 0;
-                    const vol = typeof parsed.musicVolume === 'number' ? parsed.musicVolume : 80;
-                    return (vol / 100) * 0.8;
+                    if (parsed.musicMuted === true || parsed.masterMuted === true) {
+                        if (parsed.musicVolume === 0 || parsed.masterVolume === 0) return 0;
+                    }
+                    const vol = (typeof parsed.musicVolume === 'number' && parsed.musicVolume > 0) ? parsed.musicVolume : 100;
+                    return Math.max(0.5, (vol / 100) * 0.8);
                 }
             }
         } catch (e) {}
-        return 0.7;
+        return 0.75;
     }
 
     playMusic(mode = 'menu') {
@@ -451,7 +453,7 @@ class BackgroundMusicManager {
 
         let vol = this.getMusicVolume();
         if (mode === 'gameplay') {
-            vol = vol * 0.75; // Volume de gameplay (5% abaixo dos zumbis = 60%)
+            vol = Math.max(0.50, vol * 0.80);
         }
 
         if (vol <= 0) {
@@ -490,6 +492,7 @@ class BackgroundMusicManager {
                 this.gainNode.connect(this.audioCtx.destination);
 
                 this.currentSource.start(0);
+                console.log(`[BackgroundMusicManager] Tocando música (${mode}) via Web Audio API - Volume: ${vol}`);
             } else if (this.gainNode) {
                 this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
             }
@@ -505,7 +508,9 @@ class BackgroundMusicManager {
             this.activeHtmlAudio = new Audio(`./${audioFile}`);
             this.activeHtmlAudio.loop = true;
             this.activeHtmlAudio.volume = vol;
-            this.activeHtmlAudio.play().catch(() => {
+            this.activeHtmlAudio.play().then(() => {
+                console.log(`[BackgroundMusicManager] Tocando música (${mode}) via HTML5 <audio> - Volume: ${vol}`);
+            }).catch(() => {
                 this.activeHtmlAudio = new Audio(`/${audioFile}`);
                 this.activeHtmlAudio.loop = true;
                 this.activeHtmlAudio.volume = vol;
@@ -614,9 +619,10 @@ const unlockUserInteraction = () => {
     }
     if (window.bgMusicManager) {
         window.bgMusicManager.initAudioContext();
+        window.bgMusicManager.playMusic(window.bgMusicManager.currentMode || 'menu');
     }
 };
 
-['click', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+['click', 'touchstart', 'pointerdown', 'keydown', 'mousedown'].forEach(evt => {
     window.addEventListener(evt, unlockUserInteraction, { passive: true });
 });
