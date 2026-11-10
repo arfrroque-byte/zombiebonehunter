@@ -169,26 +169,6 @@ export default function GameOverScreen({ onRestart, onMenu, engine }: any) {
           </div>
         </div>
 
-        {/* 4. REVIVE BANNER (WIDE GOLD BUTTON) */}
-        <button
-          className="zbh-go-revive-btn"
-          onPointerDown={handleRevive}
-          disabled={reviving || !canRevive}
-          title={canRevive ? 'Watch a short ad to revive and continue this wave' : 'Revive already used in this run'}
-          style={!canRevive ? { opacity: 0.5, cursor: 'default', filter: 'grayscale(0.6)' } : undefined}
-        >
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="#000000">
-            <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
-          </svg>
-          <span>
-            {reviving
-              ? 'LOADING REVIVE AD...'
-              : canRevive
-              ? 'REVIVE & CONTINUE WAVE (FREE AD)'
-              : 'REVIVE ALREADY USED (MAX 1 PER RUN)'}
-          </span>
-        </button>
-
         {/* 5. BOTTOM 3 ACTION BUTTONS */}
         <div className="zbh-go-actions-row">
           <button className="zbh-go-action-btn orange" onPointerDown={handlePlayAgain}>

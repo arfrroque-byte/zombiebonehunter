@@ -1,0 +1,233 @@
+/* Correções de UI para o Daily Login Streak */
+.zbh-daily-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .zbh-daily-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+    }
+}
+
+.zbh-daily-cell {
+    background: linear-gradient(180deg, #181d24eb, #0e1116f5);
+    border: 1.5px solid #454e59;
+    border-radius: 8px;
+    padding: 10px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    position: relative;
+    transition: transform 0.15s, border-color 0.15s;
+    min-height: 70px;
+}
+
+.zbh-daily-cell.today {
+    border-color: #39ff14;
+    box-shadow: 0 0 12px rgba(57, 255, 20, 0.4);
+    background: linear-gradient(180deg, rgba(22, 56, 16, 0.9), rgba(9, 25, 6, 0.95));
+    transform: scale(1.05);
+    z-index: 2;
+}
+
+.zbh-daily-cell.claimed {
+    opacity: 0.5;
+    border-color: #606c7a;
+}
+
+.zbh-daily-cell .d-day {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: #cfd8e3;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.zbh-daily-cell .d-reward {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    color: #ffae00;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.zbh-daily-cell.today .d-day,
+.zbh-daily-cell.today .d-reward {
+    color: #39ff14;
+}
+
+.zbh-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.zbh-modal-card {
+    padding: 15px 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Layout Simétrico para Botões do Menu de Game Over */
+.zbh-go-actions-row {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    margin: 20px auto 0 auto !important;
+}
+
+.zbh-go-action-btn {
+    flex: 1 1 0px !important;
+    height: 50px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    border-radius: 8px !important;
+    font-family: 'Teko', sans-serif !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+    transition: transform 0.15s ease, filter 0.15s ease !important;
+}
+
+.zbh-go-action-btn:active {
+    transform: scale(0.96) !important;
+}
+
+/* Correção de recorte de texto (Letra P da palavra SHOP) */
+.zbh-skew-btn,
+.zbh-skew-inner,
+.zbh-skew-title,
+.zbh-skew-sub,
+.zbh-skew-shop,
+.zbh-shop-bottom-sub {
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+.zbh-skew-title {
+    padding-right: 8px !important;
+    padding-left: 2px !important;
+    display: inline-block !important;
+    white-space: nowrap !important;
+}
+
+.zbh-skew-inner.shop-layout {
+    overflow: visible !important;
+    padding-right: 6px !important;
+}
+
+/* Posicionamento do Botão da Granada (Acima do Botão de Disparo + Metade do Tamanho) */
+.zbh-action-btns-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 8px !important;
+}
+
+#grenadeBtn {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    margin-bottom: 4px !important;
+    align-self: flex-end !important;
+}
+
+.zbh-grenade-svg {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+.zbh-grenade-badge {
+    min-width: 18px !important;
+    height: 18px !important;
+    font-size: 11px !important;
+    top: -2px !important;
+    right: -2px !important;
+}
+
+/* Botão START GAME a VERDE VIBRANTE no Menu Principal */
+.zbh-skew-btn.zbh-skew-start,
+.zbh-btn.zbh-btn-start {
+    background: radial-gradient(circle at 20% 20%, rgba(57, 255, 20, 0.45), transparent 60%), linear-gradient(180deg, #165210, #0c3308 55%, #051a03) !important;
+    border-color: #39ff14 !important;
+    box-shadow: 0 0 26px rgba(57, 255, 20, 0.65), inset 0 0 18px rgba(57, 255, 20, 0.4) !important;
+}
+
+.zbh-skew-btn.zbh-skew-start:before {
+    border-color: rgba(57, 255, 20, 0.5) !important;
+}
+
+.zbh-skew-start .zbh-start-label,
+.zbh-skew-start .zbh-start-chevrons {
+    color: #39ff14 !important;
+    text-shadow: 0 0 12px rgba(57, 255, 20, 0.8) !important;
+}
+
+/* TODOS os Restantes Botões do Menu Principal a COR DE LARANJA VIBRANTE */
+.zbh-skew-btn.zbh-skew-streak,
+.zbh-skew-btn.zbh-skew-shop,
+.zbh-skew-btn.zbh-skew-inventory,
+.zbh-skew-btn.zbh-skew-missions,
+.zbh-skew-btn.zbh-skew-settings {
+    background: radial-gradient(circle at 20% 20%, rgba(255, 160, 0, 0.45), transparent 60%), linear-gradient(180deg, #8c3b00, #542200 55%, #2b1000) !important;
+    border-color: #ffae00 !important;
+    box-shadow: 0 0 20px rgba(255, 174, 0, 0.5), inset 0 0 14px rgba(255, 174, 0, 0.3) !important;
+}
+
+.zbh-skew-btn.zbh-skew-streak:before,
+.zbh-skew-btn.zbh-skew-shop:before,
+.zbh-skew-btn.zbh-skew-inventory:before,
+.zbh-skew-btn.zbh-skew-missions:before,
+.zbh-skew-btn.zbh-skew-settings:before {
+    border-color: rgba(255, 224, 130, 0.45) !important;
+}
+
+.zbh-skew-streak .zbh-skew-title,
+.zbh-skew-shop .zbh-skew-title,
+.zbh-skew-inventory .zbh-skew-title,
+.zbh-skew-missions .zbh-skew-title,
+.zbh-skew-settings .zbh-skew-title {
+    color: #ffffff !important;
+}
+
+.zbh-skew-streak .zbh-skew-sub,
+.zbh-skew-shop .zbh-shop-bottom-sub,
+.zbh-skew-inventory .zbh-skew-sub,
+.zbh-skew-missions .zbh-skew-sub,
+.zbh-skew-settings .zbh-skew-sub {
+    color: #ffae00 !important;
+}
+
+.zbh-skew-streak .zbh-btn-svg,
+.zbh-skew-shop .zbh-btn-svg,
+.zbh-skew-inventory .zbh-btn-svg,
+.zbh-skew-missions .zbh-btn-svg,
+.zbh-skew-settings .zbh-btn-svg {
+    color: #ffae00 !important;
+}
+n.zbh-modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center; z-index: 2147483647 !important; }n.zbh-modal-card { background: #1a1a1a; border-radius: 15px; padding: 30px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 2px solid; }n.zbh-btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 18px; margin: 5px; }n.zbh-btn-daily { background-color: #39ff14; color: #000; }n.zbh-btn-shelter { background-color: #444; color: #fff; }n.zbh-btn-start { background-color: #ffae00; color: #000; }
+n.zbh-go-revive-btn { display: none !important; }n
+n.zbh-go-revive-btn { display: none !important; }n
+n.zbh-go-revive-btn { display: none !important; }n
+n/* Botão de Disparar Ligeiramente Menor */n#fireBtn { width: 92px !important; height: 92px !important; }n.zbh-bullet-svg { width: 44px !important; height: 44px !important; }n@media (min-width: 1024px) {n  #fireBtn { width: 102px !important; height: 102px !important; }n  .zbh-bullet-svg { width: 50px !important; height: 50px !important; }n}n
+n/* Ocultar botão de joystick em telas de PC/Desktop (pointer: fine), visível apenas em telemóvel/touch */n@media (pointer: fine) {n  #joystickZone {n    display: none !important;n  }n}n
