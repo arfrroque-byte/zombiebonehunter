@@ -270,7 +270,7 @@ class ReloadSoundManager {
 
         const now = this.audioCtx.currentTime;
 
-        let volMultiplier = 0.80;
+        let volMultiplier = 0.65; // Volume do reload reduzido em 5% adicional
         try {
             const savedData = localStorage.getItem('neon_deadlands_3d_meta');
             if (savedData) {
@@ -278,7 +278,7 @@ class ReloadSoundManager {
                 if (parsed) {
                     if (parsed.masterMuted) return;
                     const vol = typeof parsed.masterVolume === 'number' ? parsed.masterVolume : 80;
-                    volMultiplier = (vol / 100) * 0.90;
+                    volMultiplier = (vol / 100) * 0.73;
                 }
             }
         } catch (e) {}
@@ -350,10 +350,17 @@ class CarbineShootingSoundManager {
 
         const source = this.audioCtx.createBufferSource();
         source.buffer = this.audioBuffer;
-        source.playbackRate.value = 0.96 + Math.random() * 0.08;
+        const rate = 0.96 + Math.random() * 0.08;
+        source.playbackRate.value = rate;
 
         const gainNode = this.audioCtx.createGain();
+        const duration = this.audioBuffer.duration / rate;
+        const fadeDuration = Math.min(0.12, duration * 0.38);
+        const fadeStartTime = now + Math.max(0, duration - fadeDuration);
+
         gainNode.gain.setValueAtTime(volMultiplier, now);
+        gainNode.gain.setValueAtTime(volMultiplier, fadeStartTime);
+        gainNode.gain.linearRampToValueAtTime(0.0001, now + duration);
 
         source.connect(gainNode);
         gainNode.connect(this.audioCtx.destination);
@@ -423,7 +430,11 @@ class BackgroundMusicManager {
             this.audioCtx.resume();
         }
 
-        const vol = this.getMusicVolume();
+        let vol = this.getMusicVolume();
+        if (mode === 'gameplay') {
+            vol = vol * 0.58; // Volume da música de gameplay reduzido em 10% adicional
+        }
+
         if (vol <= 0) {
             this.stopMusic();
             return;

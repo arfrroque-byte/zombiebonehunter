@@ -225,9 +225,90 @@
 .zbh-skew-settings .zbh-btn-svg {
     color: #ffae00 !important;
 }
-n.zbh-modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center; z-index: 2147483647 !important; }n.zbh-modal-card { background: #1a1a1a; border-radius: 15px; padding: 30px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 2px solid; }n.zbh-btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 18px; margin: 5px; }n.zbh-btn-daily { background-color: #39ff14; color: #000; }n.zbh-btn-shelter { background-color: #444; color: #fff; }n.zbh-btn-start { background-color: #ffae00; color: #000; }
-n.zbh-go-revive-btn { display: none !important; }n
-n.zbh-go-revive-btn { display: none !important; }n
-n.zbh-go-revive-btn { display: none !important; }n
-n/* Botão de Disparar Ligeiramente Menor */n#fireBtn { width: 92px !important; height: 92px !important; }n.zbh-bullet-svg { width: 44px !important; height: 44px !important; }n@media (min-width: 1024px) {n  #fireBtn { width: 102px !important; height: 102px !important; }n  .zbh-bullet-svg { width: 50px !important; height: 50px !important; }n}n
-n/* Ocultar botão de joystick em telas de PC/Desktop (pointer: fine), visível apenas em telemóvel/touch */n@media (pointer: fine) {n  #joystickZone {n    display: none !important;n  }n}n
+
+.zbh-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2147483647 !important;
+}
+
+.zbh-modal-card {
+    background: #1a1a1a;
+    border-radius: 15px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    border: 2px solid;
+}
+
+.zbh-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 18px;
+    margin: 5px;
+}
+
+.zbh-btn-daily {
+    background-color: #39ff14;
+    color: #000;
+}
+
+.zbh-btn-shelter {
+    background-color: #444;
+    color: #fff;
+}
+
+.zbh-btn-start {
+    background-color: #ffae00;
+    color: #000;
+}
+
+.zbh-go-revive-btn {
+    display: none !important;
+}
+
+/* Botão de Disparar Ligeiramente Menor */
+#fireBtn {
+    width: 92px !important;
+    height: 92px !important;
+}
+
+.zbh-bullet-svg {
+    width: 44px !important;
+    height: 44px !important;
+}
+
+@media (min-width: 1024px) {
+    #fireBtn {
+        width: 102px !important;
+        height: 102px !important;
+    }
+    .zbh-bullet-svg {
+        width: 50px !important;
+        height: 50px !important;
+    }
+}
+
+/* Remover botão de joystick na versão de computador (PC / Mac / Mouse) */
+@media (pointer: fine), (hover: hover) {
+    #joystickZone,
+    #joystickBase,
+    #joystickKnob {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+}

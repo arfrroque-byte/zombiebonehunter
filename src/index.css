@@ -3,3 +3,4 @@ n.zbh-go-revive-btn { display: none !important; }n
 n.zbh-go-revive-btn { display: none !important; }n
 n/* Botão de Disparar Ligeiramente Menor */n#fireBtn { width: 92px !important; height: 92px !important; }n.zbh-bullet-svg { width: 44px !important; height: 44px !important; }n@media (min-width: 1024px) {n  #fireBtn { width: 102px !important; height: 102px !important; }n  .zbh-bullet-svg { width: 50px !important; height: 50px !important; }n}n
 n/* Ocultar botão de joystick em telas de PC/Desktop (pointer: fine), visível apenas em telemóvel/touch */n@media (pointer: fine) {n  #joystickZone {n    display: none !important;n  }n}n
+n/* Remover joystick na versão de Computador (PC / Mac / Mouse) */n@media (pointer: fine), (hover: hover) {n  #joystickZone, #joystickBase, #joystickKnob {n    display: none !important;n    visibility: hidden !important;n    pointer-events: none !important;n    opacity: 0 !important;n  }n}n
