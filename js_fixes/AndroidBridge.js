@@ -135,6 +135,7 @@ export function initAndroidBridge(playerParams, pauseGame, resumeGame) {
 
     // 4. Recompensa do Vídeo -> Reviver o Jogador
     window.ZombieOnRewarded = () => {
+        pendingRevivePopupAfterAd = false; // Fix: Evita que o popup de revive reapareça depois de ver o anúncio
         console.log("Vídeo assistido com sucesso! Revivendo jogador...");
         if (window.ZombieEngine && window.ZombieEngine.revivePlayer) {
             window.ZombieEngine.revivePlayer();

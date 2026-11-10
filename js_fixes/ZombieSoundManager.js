@@ -1,4 +1,4 @@
-// Áudio Context Único e Partilhado para Evitar o Limite de Instâncias no Android WebView
+// Áudio Context Único e Partilhado para Evitar o Limite de Instâncias no Android WebView e Navegadores Web
 function getSharedAudioContext() {
     if (!window.sharedAudioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -7,6 +7,40 @@ function getSharedAudioContext() {
         }
     }
     return window.sharedAudioCtx;
+}
+
+// Função auxiliar genérica para verificar visibilidade real de um elemento DOM
+function isElementVisible(selector) {
+    const el = document.querySelector(selector);
+    if (!el) return false;
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+    const style = window.getComputedStyle(el);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+// Função auxiliar genérica para carregar ficheiros de áudio via Fetch com múltiplos caminhos de fallback
+async function fetchAudioBuffer(ctx, filename) {
+    if (!ctx) return null;
+    const currentPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+    const paths = [
+        `./${filename}`,
+        `${currentPath}${filename}`,
+        filename,
+        `/${filename}`
+    ];
+    for (const path of paths) {
+        try {
+            const res = await fetch(path);
+            if (!res.ok) continue;
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) continue;
+            const arr = await res.arrayBuffer();
+            const buffer = await ctx.decodeAudioData(arr);
+            if (buffer) return buffer;
+        } catch (e) {}
+    }
+    console.warn(`[ZombieSoundManager] Não foi possível carregar o áudio via Web Audio API: ${filename}`);
+    return null;
 }
 
 // Gerenciador Exclusivo de Áudio MP3 Espacial 3D para Zumbis Normais e Bosses
@@ -23,7 +57,7 @@ class SpatialZombieSoundManager {
 
     initAudioContext() {
         this.audioCtx = getSharedAudioContext();
-        if (this.audioCtx && !this.normalBuffer) {
+        if (this.audioCtx && (!this.normalBuffer || !this.bossBuffer)) {
             this.loadAudioFiles();
         }
     }
@@ -31,19 +65,17 @@ class SpatialZombieSoundManager {
     async loadAudioFiles() {
         if (!this.audioCtx) return;
         try {
-            // 1. Zumbi Normal (dragon-studio-zombie-sound-357975.mp3)
-            const normalRes = await fetch('./zombie_ambient.mp3');
-            const normalArr = await normalRes.arrayBuffer();
-            this.normalBuffer = await this.audioCtx.decodeAudioData(normalArr);
-
-            // 2. Zumbi BOSS (freesound_community-zombie-moans-29924.mp3)
-            const bossRes = await fetch('./boss_ambient.mp3');
-            const bossArr = await bossRes.arrayBuffer();
-            this.bossBuffer = await this.audioCtx.decodeAudioData(bossArr);
-
-            console.log("Áudios MP3 originais puros de zumbis normais e BOSS carregados com sucesso!");
+            if (!this.normalBuffer) {
+                this.normalBuffer = await fetchAudioBuffer(this.audioCtx, 'zombie_ambient.mp3');
+            }
+            if (!this.bossBuffer) {
+                this.bossBuffer = await fetchAudioBuffer(this.audioCtx, 'boss_ambient.mp3');
+            }
+            if (this.normalBuffer || this.bossBuffer) {
+                console.log("Áudios MP3 de zumbis carregados com sucesso!");
+            }
         } catch (e) {
-            console.error("Erro ao carregar ficheiros MP3:", e);
+            console.error("Erro ao carregar ficheiros MP3 de zumbis:", e);
         }
     }
 
@@ -84,7 +116,6 @@ class SpatialZombieSoundManager {
         }
 
         const now = this.audioCtx.currentTime;
-
         if (this.activeSources.length >= 5) return;
 
         const source = this.audioCtx.createBufferSource();
@@ -129,11 +160,10 @@ class SpatialZombieSoundManager {
     updateSpatialAudio() {
         if (!this.userInteracted) return;
 
-        const isPaused = document.querySelector('.pause-buttons-row, .zbh-pause-audio-panel') !== null;
-        const isMenu = document.querySelector('.zbh-title-bone-hunter, .zbh-start-label') !== null;
-        const isModalOpen = document.querySelector('.zbh-modal-backdrop') !== null;
-        const bodyText = document.body ? document.body.innerText : '';
-        const isGameOver = bodyText.includes('GAME OVER') || bodyText.includes('DEFEATED') || bodyText.includes('VICTORY');
+        const isPaused = isElementVisible('.pause-buttons-row, .zbh-pause-audio-panel, .pause-overlay, .pause-modal');
+        const isMenu = isElementVisible('.zbh-title-bone-hunter, .zbh-start-label, .zbh-skew-start');
+        const isModalOpen = isElementVisible('.zbh-modal-backdrop');
+        const isGameOver = isElementVisible('#gameOverScreen, .zbh-gameover-backdrop');
 
         if (isPaused || isMenu || isModalOpen || isGameOver) {
             this.stopAllZombieSounds();
@@ -168,7 +198,7 @@ class SpatialZombieSoundManager {
     }
 }
 
-// Áudio MP3 de Dano do Jogador (freesound_community-male_hurt7-48124.mp3)
+// Áudio MP3 de Dano do Jogador (player_hurt.mp3)
 class PlayerHurtSoundManager {
     constructor() {
         this.audioBuffer = null;
@@ -184,14 +214,8 @@ class PlayerHurtSoundManager {
 
     async loadHurtMP3() {
         if (!this.audioCtx) return;
-        try {
-            const res = await fetch('./player_hurt.mp3');
-            const arr = await res.arrayBuffer();
-            this.audioBuffer = await this.audioCtx.decodeAudioData(arr);
-            console.log("Áudio MP3 de dano do jogador carregado com sucesso!");
-        } catch (e) {
-            console.error("Erro ao carregar MP3 de dano do jogador:", e);
-        }
+        this.audioBuffer = await fetchAudioBuffer(this.audioCtx, 'player_hurt.mp3');
+        if (this.audioBuffer) console.log("Áudio MP3 de dano do jogador carregado!");
     }
 
     playHurtSound() {
@@ -211,7 +235,7 @@ class PlayerHurtSoundManager {
                 const parsed = JSON.parse(savedData);
                 if (parsed) {
                     if (parsed.masterMuted) return;
-                    const vol = typeof parsed.masterVolume === 'number' ? parsed.masterVolume : 80;
+                    const vol = typeof parsed.musicVolume === 'number' ? parsed.musicVolume : 80;
                     volMultiplier = (vol / 100) * 0.95;
                 }
             }
@@ -231,10 +255,11 @@ class PlayerHurtSoundManager {
     }
 }
 
-// Áudio MP3 de Recarregar Arma (reloadsound.mp3) - Volume 5% Mais Baixo
+// Áudio MP3 de Recarregar Arma (reloadsound.mp3)
 class ReloadSoundManager {
     constructor() {
         this.audioBuffer = null;
+        this.currentSource = null;
         this.initAudioContext();
     }
 
@@ -247,14 +272,8 @@ class ReloadSoundManager {
 
     async loadReloadMP3() {
         if (!this.audioCtx) return;
-        try {
-            const res = await fetch('./reloadsound.mp3');
-            const arr = await res.arrayBuffer();
-            this.audioBuffer = await this.audioCtx.decodeAudioData(arr);
-            console.log("Áudio MP3 de recarga de arma carregado com sucesso!");
-        } catch (e) {
-            console.error("Erro ao carregar MP3 de recarga de arma:", e);
-        }
+        this.audioBuffer = await fetchAudioBuffer(this.audioCtx, 'reloadsound.mp3');
+        if (this.audioBuffer) console.log("Áudio MP3 de recarga de arma carregado!");
     }
 
     playReloadSound() {
@@ -267,7 +286,7 @@ class ReloadSoundManager {
 
         const now = this.audioCtx.currentTime;
 
-        let volMultiplier = 0.80; // Volume reduzido em 5%
+        let volMultiplier = 0.52; // Mesmo volume do som dos zumbis
         try {
             const savedData = localStorage.getItem('neon_deadlands_3d_meta');
             if (savedData) {
@@ -275,26 +294,34 @@ class ReloadSoundManager {
                 if (parsed) {
                     if (parsed.masterMuted) return;
                     const vol = typeof parsed.masterVolume === 'number' ? parsed.masterVolume : 80;
-                    volMultiplier = (vol / 100) * 0.90; // Volume reduzido de 0.95 para 0.90
+                    volMultiplier = (vol / 100) * 0.65;
                 }
             }
         } catch (e) {}
 
-        const source = this.audioCtx.createBufferSource();
-        source.buffer = this.audioBuffer;
-        source.playbackRate.value = 1.0;
+        if (this.currentSource) {
+            try {
+                this.currentSource.stop(0);
+                this.currentSource.disconnect();
+            } catch (e) {}
+            this.currentSource = null;
+        }
+
+        this.currentSource = this.audioCtx.createBufferSource();
+        this.currentSource.buffer = this.audioBuffer;
+        this.currentSource.playbackRate.value = 1.0;
 
         const gainNode = this.audioCtx.createGain();
         gainNode.gain.setValueAtTime(volMultiplier, now);
 
-        source.connect(gainNode);
+        this.currentSource.connect(gainNode);
         gainNode.connect(this.audioCtx.destination);
 
-        source.start(now);
+        this.currentSource.start(now);
     }
 }
 
-// Áudio MP3 de Disparo da Carbine / AK47 (carbine_shoot.mp3) Sincronizado por Bala
+// Áudio MP3 de Disparo da Carbine / AK47 (carbine_shoot.mp3)
 class CarbineShootingSoundManager {
     constructor() {
         this.audioBuffer = null;
@@ -310,14 +337,8 @@ class CarbineShootingSoundManager {
 
     async loadCarbineMP3() {
         if (!this.audioCtx) return;
-        try {
-            const res = await fetch('./carbine_shoot.mp3');
-            const arr = await res.arrayBuffer();
-            this.audioBuffer = await this.audioCtx.decodeAudioData(arr);
-            console.log("Áudio MP3 de tiro da Carbine/AK47 carregado com sucesso!");
-        } catch (e) {
-            console.error("Erro ao carregar MP3 de tiro da Carbine:", e);
-        }
+        this.audioBuffer = await fetchAudioBuffer(this.audioCtx, 'carbine_shoot.mp3');
+        if (this.audioBuffer) console.log("Áudio MP3 de tiro da Carbine/AK47 carregado!");
     }
 
     playShot() {
@@ -345,10 +366,17 @@ class CarbineShootingSoundManager {
 
         const source = this.audioCtx.createBufferSource();
         source.buffer = this.audioBuffer;
-        source.playbackRate.value = 0.96 + Math.random() * 0.08;
+        const rate = 0.96 + Math.random() * 0.08;
+        source.playbackRate.value = rate;
 
         const gainNode = this.audioCtx.createGain();
+        const duration = this.audioBuffer.duration / rate;
+        const fadeDuration = Math.min(0.20, duration * 0.40);
+        const fadeStartTime = now + Math.max(0, duration - fadeDuration);
+
         gainNode.gain.setValueAtTime(volMultiplier, now);
+        gainNode.gain.setValueAtTime(volMultiplier, fadeStartTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
         source.connect(gainNode);
         gainNode.connect(this.audioCtx.destination);
@@ -357,19 +385,24 @@ class CarbineShootingSoundManager {
     }
 }
 
-// Gerenciador da Música de Fundo MP3 (freesound_community-drama-stringsmp3-14627.mp3) via Web Audio API
+// Gerenciador de Música de Fundo MP3 (Menu: bg_music.mp3 / Gameplay: gameplay_bg_music.mp3)
 class BackgroundMusicManager {
     constructor() {
-        this.audioBuffer = null;
+        this.menuBuffer = null;
+        this.gameplayBuffer = null;
         this.currentSource = null;
         this.gainNode = null;
-        this.isPlaying = false;
+        this.currentMode = null; // 'menu' | 'gameplay' | null
+        this.isLoadingMenu = false;
+        this.isLoadingGameplay = false;
+        this.activeHtmlAudio = null;
+        this.htmlAudioPlaying = false;
         this.initAudioContext();
     }
 
     initAudioContext() {
         this.audioCtx = getSharedAudioContext();
-        if (this.audioCtx && !this.audioBuffer) {
+        if (this.audioCtx && (!this.menuBuffer || !this.gameplayBuffer)) {
             this.loadMusicMP3();
         }
     }
@@ -377,12 +410,23 @@ class BackgroundMusicManager {
     async loadMusicMP3() {
         if (!this.audioCtx) return;
         try {
-            const res = await fetch('./bg_music.mp3');
-            const arr = await res.arrayBuffer();
-            this.audioBuffer = await this.audioCtx.decodeAudioData(arr);
-            console.log("Música de Fundo MP3 carregada com sucesso!");
+            if (!this.menuBuffer && !this.isLoadingMenu) {
+                this.isLoadingMenu = true;
+                this.menuBuffer = await fetchAudioBuffer(this.audioCtx, 'bg_music.mp3');
+                this.isLoadingMenu = false;
+            }
+            if (!this.gameplayBuffer && !this.isLoadingGameplay) {
+                this.isLoadingGameplay = true;
+                this.gameplayBuffer = await fetchAudioBuffer(this.audioCtx, 'gameplay_bg_music.mp3');
+                this.isLoadingGameplay = false;
+            }
+            if (this.menuBuffer || this.gameplayBuffer) {
+                console.log("Músicas de Fundo MP3 (Menu e Gameplay) carregadas via Web Audio API!");
+            }
         } catch (e) {
-            console.error("Erro ao carregar MP3 da música de fundo:", e);
+            this.isLoadingMenu = false;
+            this.isLoadingGameplay = false;
+            console.error("Erro ao carregar MP3 das músicas de fundo:", e);
         }
     }
 
@@ -392,60 +436,116 @@ class BackgroundMusicManager {
             if (savedData) {
                 const parsed = JSON.parse(savedData);
                 if (parsed) {
-                    if (parsed.musicMuted || parsed.masterMuted) return 0;
-                    const vol = typeof parsed.musicVolume === 'number' ? parsed.musicVolume : 80;
-                    return (vol / 100) * 0.8;
+                    if (parsed.musicMuted === true || parsed.masterMuted === true) {
+                        if (parsed.musicVolume === 0 || parsed.masterVolume === 0) return 0;
+                    }
+                    const vol = (typeof parsed.musicVolume === 'number' && parsed.musicVolume > 0) ? parsed.musicVolume : 100;
+                    return Math.max(0.5, (vol / 100) * 0.8);
                 }
             }
         } catch (e) {}
-        return 0.7;
+        return 0.75;
     }
 
-    playMusic() {
+    playMusic(mode = 'menu') {
         if (window.isAdActive) return;
         if (!this.audioCtx) this.initAudioContext();
-        if (!this.audioCtx || !this.audioBuffer) return;
 
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
+        let vol = this.getMusicVolume();
+        if (mode === 'gameplay') {
+            vol = Math.max(0.50, vol * 0.80);
         }
 
-        const vol = this.getMusicVolume();
         if (vol <= 0) {
             this.stopMusic();
             return;
         }
 
-        if (!this.isPlaying) {
-            this.isPlaying = true;
-            this.currentSource = this.audioCtx.createBufferSource();
-            this.currentSource.buffer = this.audioBuffer;
-            this.currentSource.loop = true;
+        if (!this.menuBuffer || !this.gameplayBuffer) {
+            this.loadMusicMP3();
+        }
 
-            this.gainNode = this.audioCtx.createGain();
-            this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+        const targetBuffer = (mode === 'gameplay') ? this.gameplayBuffer : this.menuBuffer;
 
-            this.currentSource.connect(this.gainNode);
-            this.gainNode.connect(this.audioCtx.destination);
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume().catch(() => {});
+        }
 
-            this.currentSource.start(0);
-        } else if (this.gainNode) {
-            this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+        // Método 1: Web Audio API (Performance otimizada e sem latência)
+        if (targetBuffer && this.audioCtx) {
+            if (this.htmlAudioPlaying) {
+                this.stopHtmlAudio();
+            }
+
+            if (this.currentMode !== mode || !this.currentSource || (this.currentSource && this.currentSource.buffer !== targetBuffer)) {
+                this.stopMusic();
+
+                this.currentMode = mode;
+                this.currentSource = this.audioCtx.createBufferSource();
+                this.currentSource.buffer = targetBuffer;
+                this.currentSource.loop = true;
+
+                this.gainNode = this.audioCtx.createGain();
+                this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+
+                this.currentSource.connect(this.gainNode);
+                this.gainNode.connect(this.audioCtx.destination);
+
+                this.currentSource.start(0);
+                console.log(`[BackgroundMusicManager] Tocando música (${mode}) via Web Audio API - Volume: ${vol}`);
+            } else if (this.gainNode) {
+                this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+            }
+            return;
+        }
+
+        // Método 2: Fallback direto com Tag HTML5 <audio> (Garante execução no navegador/Vercel)
+        const audioFile = mode === 'gameplay' ? 'gameplay_bg_music.mp3' : 'bg_music.mp3';
+        if (this.currentMode !== mode || !this.activeHtmlAudio) {
+            this.stopMusic();
+            this.currentMode = mode;
+            this.htmlAudioPlaying = true;
+            this.activeHtmlAudio = new Audio(`./${audioFile}`);
+            this.activeHtmlAudio.loop = true;
+            this.activeHtmlAudio.volume = vol;
+            this.activeHtmlAudio.play().then(() => {
+                console.log(`[BackgroundMusicManager] Tocando música (${mode}) via HTML5 <audio> - Volume: ${vol}`);
+            }).catch(() => {
+                this.activeHtmlAudio = new Audio(`/${audioFile}`);
+                this.activeHtmlAudio.loop = true;
+                this.activeHtmlAudio.volume = vol;
+                this.activeHtmlAudio.play().catch(() => {});
+            });
+        } else if (this.activeHtmlAudio) {
+            this.activeHtmlAudio.volume = vol;
         }
     }
 
+    stopHtmlAudio() {
+        if (this.activeHtmlAudio) {
+            try {
+                this.activeHtmlAudio.pause();
+                this.activeHtmlAudio.currentTime = 0;
+            } catch (e) {}
+            this.activeHtmlAudio = null;
+        }
+        this.htmlAudioPlaying = false;
+    }
+
     stopMusic() {
-        if (this.isPlaying && this.currentSource) {
+        if (this.currentSource) {
             try {
                 this.currentSource.stop(0);
                 this.currentSource.disconnect();
             } catch (e) {}
             this.currentSource = null;
-            this.isPlaying = false;
         }
+        this.stopHtmlAudio();
+        this.currentMode = null;
     }
 }
 
+// Instanciar os gerenciadores no escopo global do window
 window.ZombieSoundManager = new SpatialZombieSoundManager();
 window.playerHurtManager = new PlayerHurtSoundManager();
 window.reloadSoundManager = new ReloadSoundManager();
@@ -470,6 +570,7 @@ window.playCarbineShotSound = () => {
     }
 };
 
+// Loop contínuo para reprodução inteligente de músicas e áudios
 setInterval(() => {
     if (window.isAdActive) {
         if (window.bgMusicManager) window.bgMusicManager.stopMusic();
@@ -481,23 +582,23 @@ setInterval(() => {
         window.ZombieSoundManager.updateSpatialAudio();
     }
 
-    const isPaused = document.querySelector('.pause-buttons-row, .zbh-pause-audio-panel') !== null;
-    const isMenu = document.querySelector('.zbh-title-bone-hunter, .zbh-start-label') !== null;
-    const isModalOpen = document.querySelector('.zbh-modal-backdrop') !== null;
-    const bodyText = document.body ? document.body.innerText : '';
-    const isGameOver = bodyText.includes('GAME OVER') || bodyText.includes('DEFEATED') || bodyText.includes('VICTORY');
+    const isPaused = isElementVisible('.pause-buttons-row, .zbh-pause-audio-panel, .pause-overlay, .pause-modal');
+    const isMenu = isElementVisible('.zbh-title-bone-hunter, .zbh-start-label, .zbh-skew-start');
+    const isModalOpen = isElementVisible('.zbh-modal-backdrop');
+    const isGameOver = isElementVisible('#gameOverScreen, .zbh-gameover-backdrop');
 
     if (isPaused || isMenu || isModalOpen || isGameOver) {
         if (window.bgMusicManager) {
-            window.bgMusicManager.playMusic();
+            window.bgMusicManager.playMusic('menu');
         }
     } else {
         if (window.bgMusicManager) {
-            window.bgMusicManager.stopMusic();
+            window.bgMusicManager.playMusic('gameplay');
         }
     }
 }, 100);
 
+// Desbloqueio universal e contínuo por qualquer toque/tecla na tela
 const unlockUserInteraction = () => {
     const ctx = getSharedAudioContext();
     if (ctx && ctx.state === 'suspended') {
@@ -518,9 +619,10 @@ const unlockUserInteraction = () => {
     }
     if (window.bgMusicManager) {
         window.bgMusicManager.initAudioContext();
+        window.bgMusicManager.playMusic(window.bgMusicManager.currentMode || 'menu');
     }
 };
 
-window.addEventListener('click', unlockUserInteraction, { once: true });
-window.addEventListener('touchstart', unlockUserInteraction, { once: true });
-window.addEventListener('pointerdown', unlockUserInteraction, { once: true });
+['click', 'touchstart', 'pointerdown', 'keydown', 'mousedown'].forEach(evt => {
+    window.addEventListener(evt, unlockUserInteraction, { passive: true });
+});

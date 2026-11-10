@@ -132,3 +132,212 @@
     overflow: visible !important;
     padding-right: 6px !important;
 }
+
+/* Posicionamento do Bot√£o da Granada (Acima do Bot√£o de Disparo + Metade do Tamanho) */
+.zbh-action-btns-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 8px !important;
+}
+
+#grenadeBtn {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    margin-bottom: 4px !important;
+    align-self: flex-end !important;
+}
+
+.zbh-grenade-svg {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+.zbh-grenade-badge {
+    min-width: 18px !important;
+    height: 18px !important;
+    font-size: 11px !important;
+    top: -2px !important;
+    right: -2px !important;
+}
+
+/* Bot√£o START GAME a VERDE VIBRANTE no Menu Principal */
+.zbh-skew-btn.zbh-skew-start,
+.zbh-btn.zbh-btn-start {
+    background: radial-gradient(circle at 20% 20%, rgba(57, 255, 20, 0.45), transparent 60%), linear-gradient(180deg, #165210, #0c3308 55%, #051a03) !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 26px rgba(57, 255, 20, 0.65), inset 0 0 18px rgba(57, 255, 20, 0.4) !important;
+}
+
+.zbh-skew-btn.zbh-skew-start:before {
+    border-color: rgba(57, 255, 20, 0.5) !important;
+}
+
+.zbh-skew-start .zbh-start-label,
+.zbh-skew-start .zbh-start-chevrons {
+    color: #ffffff !important;
+    text-shadow: 0 0 12px rgba(57, 255, 20, 0.8) !important;
+}
+
+/* TODOS os Restantes Bot√µes do Menu Principal a COR DE LARANJA VIBRANTE */
+.zbh-skew-btn.zbh-skew-streak,
+.zbh-skew-btn.zbh-skew-shop,
+.zbh-skew-btn.zbh-skew-inventory,
+.zbh-skew-btn.zbh-skew-missions,
+.zbh-skew-btn.zbh-skew-settings {
+    background: radial-gradient(circle at 20% 20%, rgba(255, 160, 0, 0.45), transparent 60%), linear-gradient(180deg, #8c3b00, #542200 55%, #2b1000) !important;
+    border-color: #ffae00 !important;
+    box-shadow: 0 0 20px rgba(255, 174, 0, 0.5), inset 0 0 14px rgba(255, 174, 0, 0.3) !important;
+}
+
+.zbh-skew-btn.zbh-skew-streak:before,
+.zbh-skew-btn.zbh-skew-shop:before,
+.zbh-skew-btn.zbh-skew-inventory:before,
+.zbh-skew-btn.zbh-skew-missions:before,
+.zbh-skew-btn.zbh-skew-settings:before {
+    border-color: rgba(255, 224, 130, 0.45) !important;
+}
+
+.zbh-skew-streak .zbh-skew-title,
+.zbh-skew-shop .zbh-skew-title,
+.zbh-skew-inventory .zbh-skew-title,
+.zbh-skew-missions .zbh-skew-title,
+.zbh-skew-settings .zbh-skew-title {
+    color: #ffffff !important;
+}
+
+.zbh-skew-streak .zbh-skew-sub,
+.zbh-skew-shop .zbh-shop-bottom-sub,
+.zbh-skew-inventory .zbh-skew-sub,
+.zbh-skew-missions .zbh-skew-sub,
+.zbh-skew-settings .zbh-skew-sub {
+    color: #ffae00 !important;
+}
+
+.zbh-skew-streak .zbh-btn-svg,
+.zbh-skew-shop .zbh-btn-svg,
+.zbh-skew-inventory .zbh-btn-svg,
+.zbh-skew-missions .zbh-btn-svg,
+.zbh-skew-settings .zbh-btn-svg {
+    color: #ffae00 !important;
+}
+
+.zbh-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2147483647 !important;
+}
+
+.zbh-modal-card {
+    background: #1a1a1a;
+    border-radius: 15px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    border: 2px solid;
+}
+
+.zbh-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 18px;
+    margin: 5px;
+}
+
+.zbh-btn-daily {
+    background-color: #39ff14;
+    color: #000;
+}
+
+.zbh-btn-shelter {
+    background-color: #444;
+    color: #fff;
+}
+
+.zbh-btn-start {
+    background-color: #ffae00;
+    color: #000;
+}
+
+.zbh-go-revive-btn {
+    display: none !important;
+}
+
+/* Bot√£o de Disparar Ligeiramente Menor */
+#fireBtn {
+    width: 92px !important;
+    height: 92px !important;
+}
+
+.zbh-bullet-svg {
+    width: 44px !important;
+    height: 44px !important;
+}
+
+@media (min-width: 1024px) {
+    #fireBtn {
+        width: 102px !important;
+        height: 102px !important;
+    }
+    .zbh-bullet-svg {
+        width: 50px !important;
+        height: 50px !important;
+    }
+}
+
+/* Remover bot√£o de joystick na vers√£o de computador (PC / Mac / Mouse) */
+@media (pointer: fine), (hover: hover) {
+    #joystickZone,
+    #joystickBase,
+    #joystickKnob {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+}
+
+/* Ajuste de tamanho do banner das ondas durante a gameplay (vers„o Mobile) para evitar sobreposiÁ„o */
+@media (max-width: 850px) {
+    #waveBanner {
+        top: 22% !important;
+    }
+    #waveBanner h2 {
+        font-size: clamp(28px, 6.5vw, 48px) !important;
+        line-height: 1.1 !important;
+    }
+    #waveBanner p {
+        font-size: clamp(13px, 3.5vw, 16px) !important;
+    }
+}
+
+/* ReduÁ„o do tamanho e ajuste de posiÁ„o do Wave Banner para Mobile */
+@media (max-width: 850px) {
+    #waveBanner {
+        top: 22% !important;
+        transform: translate(-50%, 0) !important;
+    }
+    #waveBanner h2 {
+        font-size: clamp(24px, 5.5vw, 42px) !important;
+        line-height: 1 !important;
+    }
+    #waveBanner p {
+        font-size: clamp(12px, 3vw, 15px) !important;
+    }
+}
