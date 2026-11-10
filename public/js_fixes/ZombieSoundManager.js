@@ -9,7 +9,16 @@ function getSharedAudioContext() {
     return window.sharedAudioCtx;
 }
 
-// Função auxiliar genérica para carregar ficheiros de áudio via Fetch com múltiplos caminhos de fallback (Web / Vercel / GitHub Pages / Android)
+// Função auxiliar genérica para verificar visibilidade real de um elemento DOM
+function isElementVisible(selector) {
+    const el = document.querySelector(selector);
+    if (!el) return false;
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+    const style = window.getComputedStyle(el);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+// Função auxiliar genérica para carregar ficheiros de áudio via Fetch com múltiplos caminhos de fallback
 async function fetchAudioBuffer(ctx, filename) {
     if (!ctx) return null;
     const currentPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
@@ -30,7 +39,7 @@ async function fetchAudioBuffer(ctx, filename) {
             if (buffer) return buffer;
         } catch (e) {}
     }
-    console.warn(`[ZombieSoundManager] Não foi possível carregar o áudio: ${filename}`);
+    console.warn(`[ZombieSoundManager] Não foi possível carregar o áudio via Web Audio API: ${filename}`);
     return null;
 }
 
@@ -63,7 +72,7 @@ class SpatialZombieSoundManager {
                 this.bossBuffer = await fetchAudioBuffer(this.audioCtx, 'boss_ambient.mp3');
             }
             if (this.normalBuffer || this.bossBuffer) {
-                console.log("Áudios MP3 de zumbis normais e BOSS carregados com sucesso!");
+                console.log("Áudios MP3 de zumbis carregados com sucesso!");
             }
         } catch (e) {
             console.error("Erro ao carregar ficheiros MP3 de zumbis:", e);
@@ -151,11 +160,10 @@ class SpatialZombieSoundManager {
     updateSpatialAudio() {
         if (!this.userInteracted) return;
 
-        const isPaused = document.querySelector('.pause-buttons-row, .zbh-pause-audio-panel') !== null;
-        const isMenu = document.querySelector('.zbh-title-bone-hunter, .zbh-start-label') !== null;
-        const isModalOpen = document.querySelector('.zbh-modal-backdrop') !== null;
-        const bodyText = document.body ? document.body.innerText : '';
-        const isGameOver = bodyText.includes('GAME OVER') || bodyText.includes('DEFEATED') || bodyText.includes('VICTORY');
+        const isPaused = isElementVisible('.pause-buttons-row, .zbh-pause-audio-panel, .pause-overlay, .pause-modal');
+        const isMenu = isElementVisible('.zbh-title-bone-hunter, .zbh-start-label, .zbh-skew-start');
+        const isModalOpen = isElementVisible('.zbh-modal-backdrop');
+        const isGameOver = isElementVisible('#gameOverScreen, .zbh-gameover-backdrop');
 
         if (isPaused || isMenu || isModalOpen || isGameOver) {
             this.stopAllZombieSounds();
@@ -278,7 +286,7 @@ class ReloadSoundManager {
 
         const now = this.audioCtx.currentTime;
 
-        let volMultiplier = 0.52; // Mesmo volume do som dos zombies (0.52 padrão para 80% volume)
+        let volMultiplier = 0.52; // Mesmo volume do som dos zumbis
         try {
             const savedData = localStorage.getItem('neon_deadlands_3d_meta');
             if (savedData) {
@@ -286,7 +294,7 @@ class ReloadSoundManager {
                 if (parsed) {
                     if (parsed.masterMuted) return;
                     const vol = typeof parsed.masterVolume === 'number' ? parsed.masterVolume : 80;
-                    volMultiplier = (vol / 100) * 0.65; // Mesmo multiplicador do som dos zumbis (0.65)
+                    volMultiplier = (vol / 100) * 0.65;
                 }
             }
         } catch (e) {}
@@ -387,6 +395,8 @@ class BackgroundMusicManager {
         this.currentMode = null; // 'menu' | 'gameplay' | null
         this.isLoadingMenu = false;
         this.isLoadingGameplay = false;
+        this.activeHtmlAudio = null;
+        this.htmlAudioPlaying = false;
         this.initAudioContext();
     }
 
@@ -411,7 +421,7 @@ class BackgroundMusicManager {
                 this.isLoadingGameplay = false;
             }
             if (this.menuBuffer || this.gameplayBuffer) {
-                console.log("Músicas de Fundo MP3 (Menu e Gameplay) carregadas!");
+                console.log("Músicas de Fundo MP3 (Menu e Gameplay) carregadas via Web Audio API!");
             }
         } catch (e) {
             this.isLoadingMenu = false;
@@ -438,20 +448,10 @@ class BackgroundMusicManager {
     playMusic(mode = 'menu') {
         if (window.isAdActive) return;
         if (!this.audioCtx) this.initAudioContext();
-        if (!this.menuBuffer || !this.gameplayBuffer) {
-            this.loadMusicMP3();
-        }
-
-        const targetBuffer = (mode === 'gameplay' && this.gameplayBuffer) ? this.gameplayBuffer : (mode === 'menu' && this.menuBuffer ? this.menuBuffer : (this.gameplayBuffer || this.menuBuffer));
-        if (!this.audioCtx || !targetBuffer) return;
-
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
-        }
 
         let vol = this.getMusicVolume();
         if (mode === 'gameplay') {
-            vol = vol * 0.75; // Volume da música de gameplay com 5% a menos que o volume dos zumbis (zumbis = 0.65 -> gameplay music = 0.60)
+            vol = vol * 0.75; // Volume de gameplay (5% abaixo dos zumbis = 60%)
         }
 
         if (vol <= 0) {
@@ -459,24 +459,72 @@ class BackgroundMusicManager {
             return;
         }
 
-        if (this.currentMode !== mode || !this.currentSource || (this.currentSource && this.currentSource.buffer !== targetBuffer)) {
-            this.stopMusic();
-
-            this.currentMode = mode;
-            this.currentSource = this.audioCtx.createBufferSource();
-            this.currentSource.buffer = targetBuffer;
-            this.currentSource.loop = true;
-
-            this.gainNode = this.audioCtx.createGain();
-            this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
-
-            this.currentSource.connect(this.gainNode);
-            this.gainNode.connect(this.audioCtx.destination);
-
-            this.currentSource.start(0);
-        } else if (this.gainNode) {
-            this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+        if (!this.menuBuffer || !this.gameplayBuffer) {
+            this.loadMusicMP3();
         }
+
+        const targetBuffer = (mode === 'gameplay') ? this.gameplayBuffer : this.menuBuffer;
+
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume().catch(() => {});
+        }
+
+        // Método 1: Web Audio API (Performance otimizada e sem latência)
+        if (targetBuffer && this.audioCtx) {
+            if (this.htmlAudioPlaying) {
+                this.stopHtmlAudio();
+            }
+
+            if (this.currentMode !== mode || !this.currentSource || (this.currentSource && this.currentSource.buffer !== targetBuffer)) {
+                this.stopMusic();
+
+                this.currentMode = mode;
+                this.currentSource = this.audioCtx.createBufferSource();
+                this.currentSource.buffer = targetBuffer;
+                this.currentSource.loop = true;
+
+                this.gainNode = this.audioCtx.createGain();
+                this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+
+                this.currentSource.connect(this.gainNode);
+                this.gainNode.connect(this.audioCtx.destination);
+
+                this.currentSource.start(0);
+            } else if (this.gainNode) {
+                this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+            }
+            return;
+        }
+
+        // Método 2: Fallback direto com Tag HTML5 <audio> (Garante execução no navegador/Vercel)
+        const audioFile = mode === 'gameplay' ? 'gameplay_bg_music.mp3' : 'bg_music.mp3';
+        if (this.currentMode !== mode || !this.activeHtmlAudio) {
+            this.stopMusic();
+            this.currentMode = mode;
+            this.htmlAudioPlaying = true;
+            this.activeHtmlAudio = new Audio(`./${audioFile}`);
+            this.activeHtmlAudio.loop = true;
+            this.activeHtmlAudio.volume = vol;
+            this.activeHtmlAudio.play().catch(() => {
+                this.activeHtmlAudio = new Audio(`/${audioFile}`);
+                this.activeHtmlAudio.loop = true;
+                this.activeHtmlAudio.volume = vol;
+                this.activeHtmlAudio.play().catch(() => {});
+            });
+        } else if (this.activeHtmlAudio) {
+            this.activeHtmlAudio.volume = vol;
+        }
+    }
+
+    stopHtmlAudio() {
+        if (this.activeHtmlAudio) {
+            try {
+                this.activeHtmlAudio.pause();
+                this.activeHtmlAudio.currentTime = 0;
+            } catch (e) {}
+            this.activeHtmlAudio = null;
+        }
+        this.htmlAudioPlaying = false;
     }
 
     stopMusic() {
@@ -486,8 +534,9 @@ class BackgroundMusicManager {
                 this.currentSource.disconnect();
             } catch (e) {}
             this.currentSource = null;
-            this.currentMode = null;
         }
+        this.stopHtmlAudio();
+        this.currentMode = null;
     }
 }
 
@@ -528,10 +577,10 @@ setInterval(() => {
         window.ZombieSoundManager.updateSpatialAudio();
     }
 
-    const isPaused = document.querySelector('.pause-buttons-row, .zbh-pause-audio-panel, .pause-overlay, .pause-modal') !== null;
-    const isMenu = document.querySelector('.zbh-title-bone-hunter, .zbh-start-label, .zbh-skew-start, .zbh-skew-btn') !== null;
-    const isModalOpen = document.querySelector('.zbh-modal-backdrop') !== null;
-    const isGameOver = document.querySelector('#gameOverScreen, .zbh-gameover-backdrop') !== null;
+    const isPaused = isElementVisible('.pause-buttons-row, .zbh-pause-audio-panel, .pause-overlay, .pause-modal');
+    const isMenu = isElementVisible('.zbh-title-bone-hunter, .zbh-start-label, .zbh-skew-start');
+    const isModalOpen = isElementVisible('.zbh-modal-backdrop');
+    const isGameOver = isElementVisible('#gameOverScreen, .zbh-gameover-backdrop');
 
     if (isPaused || isMenu || isModalOpen || isGameOver) {
         if (window.bgMusicManager) {
