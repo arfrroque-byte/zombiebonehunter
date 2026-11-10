@@ -9,14 +9,22 @@ function getSharedAudioContext() {
     return window.sharedAudioCtx;
 }
 
-// Função auxiliar genérica para carregar ficheiros de áudio via Fetch com múltiplos caminhos de fallback (Web / Vercel / Android)
+// Função auxiliar genérica para carregar ficheiros de áudio via Fetch com múltiplos caminhos de fallback (Web / Vercel / GitHub Pages / Android)
 async function fetchAudioBuffer(ctx, filename) {
     if (!ctx) return null;
-    const paths = [`/${filename}`, `./${filename}`, filename];
+    const currentPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+    const paths = [
+        `./${filename}`,
+        `${currentPath}${filename}`,
+        filename,
+        `/${filename}`
+    ];
     for (const path of paths) {
         try {
             const res = await fetch(path);
             if (!res.ok) continue;
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) continue;
             const arr = await res.arrayBuffer();
             const buffer = await ctx.decodeAudioData(arr);
             if (buffer) return buffer;
@@ -270,7 +278,7 @@ class ReloadSoundManager {
 
         const now = this.audioCtx.currentTime;
 
-        let volMultiplier = 0.65; // Volume do reload reduzido em 5% adicional
+        let volMultiplier = 0.52; // Mesmo volume do som dos zombies (0.52 padrão para 80% volume)
         try {
             const savedData = localStorage.getItem('neon_deadlands_3d_meta');
             if (savedData) {
@@ -278,7 +286,7 @@ class ReloadSoundManager {
                 if (parsed) {
                     if (parsed.masterMuted) return;
                     const vol = typeof parsed.masterVolume === 'number' ? parsed.masterVolume : 80;
-                    volMultiplier = (vol / 100) * 0.73;
+                    volMultiplier = (vol / 100) * 0.65; // Mesmo multiplicador do som dos zumbis (0.65)
                 }
             }
         } catch (e) {}
@@ -355,12 +363,12 @@ class CarbineShootingSoundManager {
 
         const gainNode = this.audioCtx.createGain();
         const duration = this.audioBuffer.duration / rate;
-        const fadeDuration = Math.min(0.12, duration * 0.38);
+        const fadeDuration = Math.min(0.20, duration * 0.40);
         const fadeStartTime = now + Math.max(0, duration - fadeDuration);
 
         gainNode.gain.setValueAtTime(volMultiplier, now);
         gainNode.gain.setValueAtTime(volMultiplier, fadeStartTime);
-        gainNode.gain.linearRampToValueAtTime(0.0001, now + duration);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
         source.connect(gainNode);
         gainNode.connect(this.audioCtx.destination);
@@ -422,6 +430,9 @@ class BackgroundMusicManager {
     playMusic(mode = 'menu') {
         if (window.isAdActive) return;
         if (!this.audioCtx) this.initAudioContext();
+        if (!this.menuBuffer || !this.gameplayBuffer) {
+            this.loadMusicMP3();
+        }
 
         const buffer = (mode === 'gameplay' && this.gameplayBuffer) ? this.gameplayBuffer : (this.menuBuffer || this.gameplayBuffer);
         if (!this.audioCtx || !buffer) return;
@@ -432,7 +443,7 @@ class BackgroundMusicManager {
 
         let vol = this.getMusicVolume();
         if (mode === 'gameplay') {
-            vol = vol * 0.58; // Volume da música de gameplay reduzido em 10% adicional
+            vol = vol * 0.75; // Volume da música de gameplay com 5% a menos que o volume dos zumbis (zumbis = 0.65 -> gameplay music = 0.60)
         }
 
         if (vol <= 0) {
@@ -452,7 +463,7 @@ class BackgroundMusicManager {
             this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
 
             this.currentSource.connect(this.gainNode);
-            this.gainNode.connect(this.audioCtx.destination);
+            gainNode.connect(this.audioCtx.destination);
 
             this.currentSource.start(0);
         } else if (this.gainNode) {
