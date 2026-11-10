@@ -954,14 +954,14 @@ const weapons: Record<string, any> = {
   rocket:  { name: 'Rocket Launcher', slot: 'PRIMARY', fireRate: 0.92,  damage: 165, spread: 0.012,  speed: 25, pellets: 1, range: 46, maxAmmo: 1,  reloadTime: 2.2, recoil: 1.85, explosionRadius: 1.4 }
 };
 const zombieTypes: Record<string, any> = {
-  walker:  { hp: 60,  speed: 2.20, damage: 10, reward: 3,  score: 36,  scale: 1.00, hit: PLAYER_RADIUS, atkRange: 1.55, atkCd: 0.82, detectRange: 48, armorResist: 0.00, headshotMult: 1.75, animSpeed: 5.3, deathTime: 0.36 },
-  runner:  { hp: 40,  speed: 3.85, damage: 8,  reward: 3,  score: 46,  scale: 0.88, hit: PLAYER_RADIUS, atkRange: 1.42, atkCd: 0.52, detectRange: 52, armorResist: 0.00, headshotMult: 1.75, animSpeed: 8.8, deathTime: 0.30 },
-  armored: { hp: 125, speed: 1.75, damage: 14, reward: 6,  score: 82,  scale: 1.08, hit: PLAYER_RADIUS, atkRange: 1.62, atkCd: 0.90, detectRange: 46, armorResist: 0.55, headshotMult: 2.10, animSpeed: 4.6, deathTime: 0.42 },
-  brute:   { hp: 220, speed: 1.65, damage: 24, reward: 9,  score: 115, scale: 2.10, hit: 1.35,          atkRange: 2.20, atkCd: 1.20, detectRange: 50, armorResist: 0.15, headshotMult: 1.60, animSpeed: 4.4, deathTime: 0.50, smashRadius: 4.2, smashDamage: 28, smashWindup: 0.65, smashCd: 5.5 },
-  toxic:   { hp: 65,  speed: 2.00, damage: 10, reward: 5,  score: 72,  scale: 0.94, hit: PLAYER_RADIUS, atkRange: 1.55, atkCd: 0.85, detectRange: 48, armorResist: 0.00, headshotMult: 1.75, animSpeed: 5.1, deathTime: 0.35, poolRadius: 2.1, poolDuration: 4.5, poolDmg: 5, poolInterval: 0.6, explodeRadius: 3.2, explodeDmg: 16 },
-  crawler: { hp: 28,  speed: 2.95, damage: 7,  reward: 2,  score: 42,  scale: 0.72, hit: PLAYER_RADIUS, atkRange: 1.28, atkCd: 0.68, detectRange: 45, armorResist: 0.00, headshotMult: 1.85, animSpeed: 7.4, deathTime: 0.30, pounceRange: 3.6, pounceSpeedMult: 1.85 },
-  spitter: { hp: 65,  speed: 2.00, damage: 10, reward: 5,  score: 72,  scale: 0.94, hit: PLAYER_RADIUS, atkRange: 1.55, atkCd: 0.85, detectRange: 48, armorResist: 0.00, headshotMult: 1.75, animSpeed: 5.1, deathTime: 0.35, poolRadius: 2.1, poolDuration: 4.5, poolDmg: 5, poolInterval: 0.6, explodeRadius: 3.2, explodeDmg: 16 },
-  boss:    { hp: 850, speed: 1.65, damage: 35, reward: 50, score: 650, scale: 2.45, hit: 1.75,          atkRange: 2.60, atkCd: 0.95, detectRange: 65, armorResist: 0.10, headshotMult: 1.50, animSpeed: 4.2, deathTime: 0.60 }
+  walker:  { hp: 60,  speed: 2.65, damage: 10, reward: 3,  score: 36,  scale: 1.00, hit: PLAYER_RADIUS, atkRange: 1.65, atkCd: 0.70, detectRange: 48, armorResist: 0.00, headshotMult: 1.75, animSpeed: 5.3, deathTime: 0.36 },
+  runner:  { hp: 40,  speed: 4.45, damage: 8,  reward: 3,  score: 46,  scale: 0.88, hit: PLAYER_RADIUS, atkRange: 1.50, atkCd: 0.45, detectRange: 52, armorResist: 0.00, headshotMult: 1.75, animSpeed: 8.8, deathTime: 0.30 },
+  armored: { hp: 125, speed: 2.15, damage: 14, reward: 6,  score: 82,  scale: 1.08, hit: PLAYER_RADIUS, atkRange: 1.70, atkCd: 0.80, detectRange: 46, armorResist: 0.55, headshotMult: 2.10, animSpeed: 4.6, deathTime: 0.42 },
+  brute:   { hp: 220, speed: 2.05, damage: 24, reward: 9,  score: 115, scale: 2.10, hit: 1.35,          atkRange: 2.30, atkCd: 1.05, detectRange: 50, armorResist: 0.15, headshotMult: 1.60, animSpeed: 4.4, deathTime: 0.50, smashRadius: 4.2, smashDamage: 28, smashWindup: 0.65, smashCd: 5.5 },
+  toxic:   { hp: 65,  speed: 2.45, damage: 10, reward: 5,  score: 72,  scale: 0.94, hit: PLAYER_RADIUS, atkRange: 1.65, atkCd: 0.75, detectRange: 48, armorResist: 0.00, headshotMult: 1.75, animSpeed: 5.1, deathTime: 0.35, poolRadius: 2.1, poolDuration: 4.5, poolDmg: 5, poolInterval: 0.6, explodeRadius: 3.2, explodeDmg: 16 },
+  crawler: { hp: 28,  speed: 3.45, damage: 7,  reward: 2,  score: 42,  scale: 0.72, hit: PLAYER_RADIUS, atkRange: 1.35, atkCd: 0.55, detectRange: 45, armorResist: 0.00, headshotMult: 1.85, animSpeed: 7.4, deathTime: 0.30, pounceRange: 3.6, pounceSpeedMult: 1.85 },
+  spitter: { hp: 65,  speed: 2.45, damage: 10, reward: 5,  score: 72,  scale: 0.94, hit: PLAYER_RADIUS, atkRange: 1.65, atkCd: 0.75, detectRange: 48, armorResist: 0.00, headshotMult: 1.75, animSpeed: 5.1, deathTime: 0.35, poolRadius: 2.1, poolDuration: 4.5, poolDmg: 5, poolInterval: 0.6, explodeRadius: 3.2, explodeDmg: 16 },
+  boss:    { hp: 850, speed: 2.10, damage: 35, reward: 50, score: 650, scale: 2.45, hit: 1.75,          atkRange: 2.75, atkCd: 0.85, detectRange: 65, armorResist: 0.10, headshotMult: 1.50, animSpeed: 4.2, deathTime: 0.60 }
 };
 
 /* Shared geometry/material helpers */
@@ -2687,10 +2687,20 @@ function createZombie(type, forcedSkin?: ZombieSkinDef){
   z.hp=base.hp; z.maxHp=base.hp;
   z.speed=base.speed; z.damage=base.damage;
   z.reward=base.reward; z.score=base.score;
+  z.atkRange = base.atkRange;
+  z.baseAtkCd = base.atkCd;
+  z.armorResist = base.armorResist;
+  z.headshotMult = base.headshotMult;
   // Independent 3D groan timer (initial stagger between 0.5s and 6.0s so zombies don't all groan at the same instant)
   z.groanTimer = rand(0.5, 6.0);
   z.groanPitchMod = rand(0.92, 1.08);
   z.activeGroans = [];
+
+  if (DEBUG_BALANCE && waveStats.active) {
+    waveStats.zombieTypes[type] = (waveStats.zombieTypes[type] || 0) + 1;
+    waveStats.zombiesSpawned++;
+  }
+
   return z;
 }
 
@@ -2793,28 +2803,114 @@ function spawnBurst(x, z, color, count, minSpeed, maxSpeed) {
   }
 }
 
+/* ── GAMEPLAY BALANCE DEBUG LOGGER (DEVELOPMENT ONLY) ── */
+const DEBUG_BALANCE = true; // Toggle this flag to enable/disable balance logging
+let waveStats = {
+  active: false,
+  wave: 0,
+  startTime: 0,
+  frames: 0,
+  startPlayerHp: 0,
+  startPlayerShield: 0,
+  damageTaken: 0,
+  medkitsCollected: 0,
+  kevlarCollected: 0,
+  zombiesKilled: 0,
+  zombiesSpawned: 0,
+  deaths: 0,
+  zombieTypes: {} as Record<string, number>,
+  peakHp: 0,
+  peakSpeed: 0,
+  peakRunnerSpeed: 0,
+  peakWalkerHp: 0,
+  updateTimeTotal: 0,
+  updateTimeSamples: 0,
+  maxActiveZombies: 0
+};
+
+function startWaveDebug(wave: number, totalZombies: number) {
+  if (!DEBUG_BALANCE) return;
+  waveStats = {
+    active: true,
+    wave,
+    startTime: performance.now(),
+    frames: 0,
+    startPlayerHp: player ? player.hp : 100,
+    startPlayerShield: player ? (player.shield || 0) : 0,
+    damageTaken: 0,
+    medkitsCollected: 0,
+    kevlarCollected: 0,
+    zombiesKilled: 0,
+    zombiesSpawned: 0,
+    deaths: 0,
+    zombieTypes: {},
+    peakHp: 0,
+    peakSpeed: 0,
+    peakRunnerSpeed: 0,
+    peakWalkerHp: 0,
+    updateTimeTotal: 0,
+    updateTimeSamples: 0,
+    maxActiveZombies: 0
+  };
+  console.log(`\n[DEBUG] --- WAVE ${wave} STARTED --- (Total expected: ${totalZombies})`);
+}
+
+function endWaveDebug() {
+  if (!DEBUG_BALANCE || !waveStats.active) return;
+  waveStats.active = false;
+  const durationMs = performance.now() - waveStats.startTime;
+  const durationSec = (durationMs / 1000).toFixed(2);
+  const avgFps = (waveStats.frames / (durationMs / 1000)).toFixed(1);
+  const avgUpdateTime = waveStats.updateTimeSamples > 0 ? (waveStats.updateTimeTotal / waveStats.updateTimeSamples).toFixed(2) : '0';
+
+  const endHp = player ? player.hp : 0;
+  const endShield = player ? (player.shield || 0) : 0;
+
+  // Validation Checks
+  const walkerBaseHp = zombieTypes.walker.hp;
+  const walkerHpCap = walkerBaseHp * WAVE_SCALING_CONFIG.maxHpMult;
+  const walkerHpValid = waveStats.peakWalkerHp <= walkerHpCap;
+
+  const runnerBaseSpeed = zombieTypes.runner.speed;
+  const runnerSpeedCap = runnerBaseSpeed * WAVE_SCALING_CONFIG.maxSpeedMult;
+  const runnerSpeedValid = waveStats.peakRunnerSpeed <= runnerSpeedCap;
+
+  console.log(`[DEBUG] ====== WAVE ${waveStats.wave} END OF WAVE REPORT ======`);
+  console.log(`⏱️ DURATION: ${durationSec}s | AVG FPS: ${avgFps} | AVG UPDATE MS: ${avgUpdateTime}ms`);
+  console.log(`💀 ZOMBIES: Spawned: ${waveStats.zombiesSpawned} | Killed: ${waveStats.zombiesKilled} | Max Active: ${waveStats.maxActiveZombies}`);
+  console.log(`📊 TYPES: ${JSON.stringify(waveStats.zombieTypes)}`);
+  console.log(`📈 MAX STATS: HP: ${waveStats.peakHp.toFixed(1)} | Speed: ${waveStats.peakSpeed.toFixed(2)}`);
+  console.log(`🛡️ PLAYER: HP: ${waveStats.startPlayerHp.toFixed(0)}->${endHp.toFixed(0)} | Shield: ${waveStats.startPlayerShield.toFixed(0)}->${endShield.toFixed(0)} | Dmg Taken: ${waveStats.damageTaken.toFixed(0)}`);
+  console.log(`🎁 LOOT: Medkits: ${waveStats.medkitsCollected} | Kevlar: ${waveStats.kevlarCollected}`);
+  console.log(`⛔ DEATHS: ${waveStats.deaths}`);
+  console.log(`✔️ VALIDATION:`);
+  console.log(`   - Walker HP Cap (${walkerHpCap.toFixed(1)}): Peak was ${waveStats.peakWalkerHp.toFixed(1)} -> ${walkerHpValid ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(`   - Runner Speed Cap (${runnerSpeedCap.toFixed(2)}): Peak was ${waveStats.peakRunnerSpeed.toFixed(2)} -> ${runnerSpeedValid ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(`====================================================\n`);
+}
+
 /* ── STAGE 4: WAVE PROGRESSION, COMPOSITION & SCALING CONFIGURATION ── */
 const WAVE_SCALING_CONFIG = {
-  maxActiveZombies: 36,
-  minSpawnDist: 23,
-  maxSpawnDist: 33,
+  maxActiveZombies: 48,
+  minSpawnDist: 18,
+  maxSpawnDist: 28,
   minZombieSeparation: 1.65,
   baseSpawnInterval: 0.84,
-  minSpawnInterval: 0.24,
-  spawnIntervalDecay: 0.032,
+  minSpawnInterval: 0.20,
+  spawnIntervalDecay: 0.035,
   prepInterval: 3.0,
-  hpScalePerWave: 0.11,
+  hpScalePerWave: 0.06,
   softCapWave: 15,
-  lateHpScalePerWave: 0.055,
-  maxHpMult: 6.5,
-  dmgScalePerWave: 0.035,
-  maxDmgMult: 2.8,
-  speedScalePerWave: 0.015,
-  maxSpeedMult: 1.35,
+  lateHpScalePerWave: 0.02,
+  maxHpMult: 3.5,
+  dmgScalePerWave: 0.04,
+  maxDmgMult: 3.0,
+  speedScalePerWave: 0.020,
+  maxSpeedMult: 1.62,
   rewardScalePerWave: 0.035,
   scoreScalePerWave: 0.08,
   // Milestone difficulty tier: every 5 waves (5, 10, 15, ...) zombies gain extra HP and damage
-  tierHpPerStep: 0.15,
+  tierHpPerStep: 0.08,
   tierDmgPerStep: 0.10
 };
 
@@ -2833,13 +2929,13 @@ function getWaveDifficultyMultipliers(wave: number) {
   const lateW = Math.max(0, w - WAVE_SCALING_CONFIG.softCapWave);
 
   const tier = getWaveTierMultipliers(wave);
-  const hpMult = tier.hpMult * Math.min(
+  const hpMult = Math.min(
     WAVE_SCALING_CONFIG.maxHpMult,
-    1 + earlyW * WAVE_SCALING_CONFIG.hpScalePerWave + lateW * WAVE_SCALING_CONFIG.lateHpScalePerWave
+    tier.hpMult * (1 + earlyW * WAVE_SCALING_CONFIG.hpScalePerWave + lateW * WAVE_SCALING_CONFIG.lateHpScalePerWave)
   );
-  const dmgMult = tier.dmgMult * Math.min(
+  const dmgMult = Math.min(
     WAVE_SCALING_CONFIG.maxDmgMult,
-    1 + w * WAVE_SCALING_CONFIG.dmgScalePerWave
+    tier.dmgMult * (1 + w * WAVE_SCALING_CONFIG.dmgScalePerWave)
   );
   const speedMult = Math.min(
     WAVE_SCALING_CONFIG.maxSpeedMult,
@@ -2883,9 +2979,12 @@ function buildWaveComposition(wave: number): string[] {
     pushMany('toxic', 1);
   } else {
     // Waves 6+ Endless Structured Scaling across all 6 unlocked classes
-    const clampedW = Math.min(wave, 25);
-    const total = Math.min(140, Math.floor(16 + wave * 4.0 + Math.pow(clampedW, 1.32) * 0.85));
-    const bruteCnt   = Math.min(14, Math.max(1, Math.floor(total * Math.min(0.12, 0.05 + (wave - 5) * 0.005))));
+    const clampedW = Math.min(wave, 40);
+    // Smoother, less exponential curve. Targets ~89 zombies at Wave 15, ~113 at Wave 20, capping at 150.
+    const total = Math.min(150, Math.floor(24 + wave * 3.2 + Math.pow(clampedW, 1.15) * 0.80));
+
+    // Maintain enemy composition distribution
+    const bruteCnt   = Math.min(14, Math.max(1, Math.floor(total * Math.min(0.12, 0.04 + (wave - 5) * 0.005))));
     const toxicCnt   = Math.floor(total * Math.min(0.16, 0.10 + (wave - 5) * 0.004));
     const armoredCnt = Math.floor(total * Math.min(0.18, 0.11 + (wave - 5) * 0.005));
     const crawlerCnt = Math.floor(total * 0.14);
@@ -3893,6 +3992,10 @@ function nearestZombie(maxDist) {
   return best;
 }
 function hurtPlayer(amount) {
+  if (DEBUG_BALANCE && waveStats.active) {
+    waveStats.damageTaken += amount;
+  }
+
   let rem = amount;
 
   // Robot Companion Energy Barrier absorbs incoming damage before Shield & HP
@@ -4435,6 +4538,13 @@ function spawnZombie() {
   z.hp = z.maxHp = Math.round(base.hp * mults.hpMult);
   z.speed = base.speed * mults.speedMult;
   z.damage = Math.round(base.damage * mults.dmgMult);
+
+  if (DEBUG_BALANCE && waveStats.active) {
+    waveStats.peakHp = Math.max(waveStats.peakHp, z.maxHp);
+    waveStats.peakSpeed = Math.max(waveStats.peakSpeed, z.speed);
+    if (type === 'walker') waveStats.peakWalkerHp = Math.max(waveStats.peakWalkerHp, z.maxHp);
+    if (type === 'runner') waveStats.peakRunnerSpeed = Math.max(waveStats.peakRunnerSpeed, z.speed);
+  }
   z.reward = Math.round(base.reward * mults.rewardMult);
   z.score = Math.round(base.score * mults.scoreMult);
 
@@ -4451,6 +4561,11 @@ function killZombie(idx) {
   const z = zombies[idx];
   if (!z || z.dead) return;
   z.dead = true;
+
+  if (DEBUG_BALANCE && waveStats.active) {
+    waveStats.zombiesKilled++;
+  }
+
   stopZombieGroan(z);
   if (z.smashRing) z.smashRing.visible = false;
   if (z.auraRing) z.auraRing.visible = false;
@@ -4530,13 +4645,16 @@ function killZombie(idx) {
     const pKind = pRoll < 0.34 ? 'overcharge' : pRoll < 0.67 ? 'magnet' : 'cryo';
     spawnPickup(pKind, x + rand(-0.35, 0.35), zpos + rand(-0.35, 0.35), 1);
   } else {
-    if (Math.random() < 0.08) {
+    // Dynamic loot drops: chance decreases as waves progress to increase late-game survival pressure
+    const wLevel = run ? run.wave : 1;
+    const medkitChance = Math.max(0.02, 0.08 - (wLevel * 0.0015));
+    if (Math.random() < medkitChance) {
       spawnPickup('medkit', x + rand(-0.25, 0.25), zpos + rand(-0.25, 0.25), 18 + ((Math.random() * 12) | 0));
     }
-    // Kevlar drop frequency is strictly 50% of the HP medkit drop rate (0.04 vs 0.08)
-    if (Math.random() < 0.04) {
+    // Kevlar drop frequency is strictly 50% of the HP medkit drop rate
+    if (Math.random() < medkitChance * 0.5) {
       spawnPickup('kevlar', x + rand(-0.25, 0.25), zpos + rand(-0.25, 0.25), 25 + ((Math.random() * 15) | 0));
-    } else if (Math.random() < 0.06) {
+    } else if (Math.random() < 0.04) {
       const pRoll = Math.random();
       const pKind = pRoll < 0.34 ? 'overcharge' : pRoll < 0.67 ? 'magnet' : 'cryo';
       spawnPickup(pKind, x + rand(-0.25, 0.25), zpos + rand(-0.25, 0.25), 1);
@@ -5533,9 +5651,9 @@ function updateZombies(dt) {
     }
 
     // 8. Melee Attack Check within Configurable Range & Cooldown
-    const reach = Math.max(z.atkRange || 1.55, z.hitR + PLAYER_RADIUS + 0.2);
+    const reach = Math.max(z.atkRange || 1.65, z.hitR + PLAYER_RADIUS + 0.35);
     if (d < reach && z.atkCd <= 0 && (!z.smashTimer || z.smashTimer <= 0)) {
-      z.atkCd = z.baseAtkCd || 0.82;
+      z.atkCd = z.baseAtkCd || 0.70;
       z.atkAnim = 0.28;
       z.state = 'attack';
       if (sfx && sfx.zombieGroan) sfx.zombieGroan(z.type, z);
@@ -5574,9 +5692,11 @@ function updatePickups(dt) {
         sfx.pickup();
         toast('+' + p.value + ' bones');
       } else if (p.kind === 'medkit') {
+        if (DEBUG_BALANCE && waveStats.active) waveStats.medkitsCollected++;
         player.hp = clamp(player.hp + p.value, 0, player.maxHp);
         toast('Medkit restored ' + p.value + ' HP');
       } else if (p.kind === 'kevlar') {
+        if (DEBUG_BALANCE && waveStats.active) waveStats.kevlarCollected++;
         player.shield = clamp((player.shield || 0) + p.value, 0, player.maxShield || 100);
         sfx.pickup();
         toast('Kevlar Armor +' + p.value);
@@ -5659,6 +5779,7 @@ function updateSpawning(dt) {
       run.nextWaveCd = WAVE_SCALING_CONFIG.prepInterval;
       metaMax('bestWave', run.wave);
       showBanner(`WAVE ${run.wave} CLEARED!`, 'Next wave starting shortly...');
+      if (DEBUG_BALANCE) endWaveDebug();
     }
     run.nextWaveCd -= dt;
     if (run.nextWaveCd <= 0) {
@@ -6306,6 +6427,7 @@ function updateGame(dt) {
 
   if (player.hp <= 0) {
     player.hp = 0;
+    if (DEBUG_BALANCE && waveStats.active) waveStats.deaths++;
     gameOver();
   }
 }
@@ -6323,7 +6445,16 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
   if (screen === 'game' && !paused) {
-    updateGame(dt);
+    if (DEBUG_BALANCE && waveStats.active) {
+      const updateStart = performance.now();
+      updateGame(dt);
+      waveStats.updateTimeTotal += performance.now() - updateStart;
+      waveStats.updateTimeSamples++;
+      waveStats.frames++;
+      waveStats.maxActiveZombies = Math.max(waveStats.maxActiveZombies, zombies.length);
+    } else {
+      updateGame(dt);
+    }
   } else if (screen === 'menu') {
     updateMenuScene(dt);
   } else {
