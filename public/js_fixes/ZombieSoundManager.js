@@ -385,6 +385,8 @@ class BackgroundMusicManager {
         this.currentSource = null;
         this.gainNode = null;
         this.currentMode = null; // 'menu' | 'gameplay' | null
+        this.isLoadingMenu = false;
+        this.isLoadingGameplay = false;
         this.initAudioContext();
     }
 
@@ -398,16 +400,22 @@ class BackgroundMusicManager {
     async loadMusicMP3() {
         if (!this.audioCtx) return;
         try {
-            if (!this.menuBuffer) {
+            if (!this.menuBuffer && !this.isLoadingMenu) {
+                this.isLoadingMenu = true;
                 this.menuBuffer = await fetchAudioBuffer(this.audioCtx, 'bg_music.mp3');
+                this.isLoadingMenu = false;
             }
-            if (!this.gameplayBuffer) {
+            if (!this.gameplayBuffer && !this.isLoadingGameplay) {
+                this.isLoadingGameplay = true;
                 this.gameplayBuffer = await fetchAudioBuffer(this.audioCtx, 'gameplay_bg_music.mp3');
+                this.isLoadingGameplay = false;
             }
             if (this.menuBuffer || this.gameplayBuffer) {
                 console.log("Músicas de Fundo MP3 (Menu e Gameplay) carregadas!");
             }
         } catch (e) {
+            this.isLoadingMenu = false;
+            this.isLoadingGameplay = false;
             console.error("Erro ao carregar MP3 das músicas de fundo:", e);
         }
     }
@@ -434,8 +442,8 @@ class BackgroundMusicManager {
             this.loadMusicMP3();
         }
 
-        const buffer = (mode === 'gameplay' && this.gameplayBuffer) ? this.gameplayBuffer : (this.menuBuffer || this.gameplayBuffer);
-        if (!this.audioCtx || !buffer) return;
+        const targetBuffer = (mode === 'gameplay' && this.gameplayBuffer) ? this.gameplayBuffer : (mode === 'menu' && this.menuBuffer ? this.menuBuffer : (this.gameplayBuffer || this.menuBuffer));
+        if (!this.audioCtx || !targetBuffer) return;
 
         if (this.audioCtx.state === 'suspended') {
             this.audioCtx.resume();
@@ -451,19 +459,19 @@ class BackgroundMusicManager {
             return;
         }
 
-        if (this.currentMode !== mode || !this.currentSource) {
+        if (this.currentMode !== mode || !this.currentSource || (this.currentSource && this.currentSource.buffer !== targetBuffer)) {
             this.stopMusic();
 
             this.currentMode = mode;
             this.currentSource = this.audioCtx.createBufferSource();
-            this.currentSource.buffer = buffer;
+            this.currentSource.buffer = targetBuffer;
             this.currentSource.loop = true;
 
             this.gainNode = this.audioCtx.createGain();
             this.gainNode.gain.setValueAtTime(vol, this.audioCtx.currentTime);
 
             this.currentSource.connect(this.gainNode);
-            gainNode.connect(this.audioCtx.destination);
+            this.gainNode.connect(this.audioCtx.destination);
 
             this.currentSource.start(0);
         } else if (this.gainNode) {
@@ -520,11 +528,10 @@ setInterval(() => {
         window.ZombieSoundManager.updateSpatialAudio();
     }
 
-    const isPaused = document.querySelector('.pause-buttons-row, .zbh-pause-audio-panel') !== null;
-    const isMenu = document.querySelector('.zbh-title-bone-hunter, .zbh-start-label') !== null;
+    const isPaused = document.querySelector('.pause-buttons-row, .zbh-pause-audio-panel, .pause-overlay, .pause-modal') !== null;
+    const isMenu = document.querySelector('.zbh-title-bone-hunter, .zbh-start-label, .zbh-skew-start, .zbh-skew-btn') !== null;
     const isModalOpen = document.querySelector('.zbh-modal-backdrop') !== null;
-    const bodyText = document.body ? document.body.innerText : '';
-    const isGameOver = bodyText.includes('GAME OVER') || bodyText.includes('DEFEATED') || bodyText.includes('VICTORY');
+    const isGameOver = document.querySelector('#gameOverScreen, .zbh-gameover-backdrop') !== null;
 
     if (isPaused || isMenu || isModalOpen || isGameOver) {
         if (window.bgMusicManager) {
